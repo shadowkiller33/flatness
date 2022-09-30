@@ -4,7 +4,7 @@ from functools import reduce
 
 def score(candidate,model,tokenizer,test_inputs, test_labels,eval_batch_size):
     test_dataset = loader_labeled(
-        test_inputs[:20], test_labels[:20], tokenizer, 1000, candidate, model)
+        test_inputs, test_labels, tokenizer, 1000, candidate, model)
     test_loader = Data.DataLoader(
         dataset=test_dataset, batch_size=eval_batch_size, shuffle=False)
     acc_total = validate(test_loader, model)
