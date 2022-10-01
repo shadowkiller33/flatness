@@ -4,7 +4,7 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Model, GPT2Config
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import os
 import json
-
+from operator import itemgetter
 import random
 from tqdm import tqdm
 import argparse
@@ -99,11 +99,14 @@ def create_set(data,demo_num,seed,dict):
     random.seed(seed)
     test_inputs = [x['text'] for x in data['test']]
     test_labels = [dict[str(x['label'])] for x in data['test']]
-
+    index = random.sample(range(1, len(data['train']['text'])), demo_num)
     #demos = sample(data['train']['text'],demo_num)
-
-    demon_inputs = sample(data['train']['text'],demo_num)
-    demon_labels = sample(data['train']['label'],demo_num)
+    # a = [-2, 1, 5, 3, 8, 5, 6]
+    # b = [1, 2, 5]
+    # print(itemgetter(*b)(a))
+    text, label = data['train']['text'], data['train']['label']
+    demon_inputs = [text[i] for i in index]
+    demon_labels = [label[i] for i in index] #data['train']['label'][index]
 
     return demon_labels, demon_inputs, test_inputs, test_labels
 
