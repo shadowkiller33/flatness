@@ -65,7 +65,7 @@ def validate(valloader, model):
 
 class loader_labeled(Dataset):
     # Data loader for labeled data
-    def __init__(self, dataset_text, dataset_label, tokenizer, max_seq_len, instruction,model):
+    def __init__(self, dataset_text, dataset_label, tokenizer, max_seq_len, instruction,model,prompt):
         self.tokenizer = tokenizer
         self.text = dataset_text
         self.labels = dataset_label
@@ -73,17 +73,18 @@ class loader_labeled(Dataset):
         self.model = model
         self.ins = instruction
         self.trans_dist = {}
-
+        self.prompt = prompt
     def __len__(self):
         return len(self.labels)
 
 
     def __getitem__(self, idx):
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-            self.model.resize_token_embeddings(len(self.tokenizer))
-        encode_result = self.tokenizer(self.ins + '\n' + 'Input:' + self.text[idx] + '\n' + 'Output:', return_tensors='pt',padding='max_length',max_length=1000)
-        label = self.tokenizer(self.labels[idx], return_tensors='pt',padding='max_length',max_length=100)
+        # if self.tokenizer.pad_token is None:
+        #     self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        #     #self.model.resize_token_embeddings(len(self.tokenizer))
+        #text1 = self.ins + f'<|startoftext|> {self.prompt}Input: {self.text[idx]}<|pad|>Output:' + '\n'
+        encode_result = self.tokenizer(self.text[idx], return_tensors='pt',truncation=True,padding='max_length',max_length=1000)
+        label = self.tokenizer(self.labels[idx], return_tensors='pt',padding='max_length',max_length=1000)
         return encode_result, label
 
 
@@ -108,8 +109,8 @@ def create_set(data,demo_num,seed,dict):
 def pashuffle(string, perc=10):
     data = string.split()
     L = len(data)
-    gap = random.randint(1, 2)
-    a = random.randint(0, L-2)
+    gap = random.randint(1, 3)
+    a = random.randint(0, L-4)
 
     data[a], data[a+gap] = data[a+gap], data[a]
     return " ".join(data)
