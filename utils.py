@@ -50,6 +50,7 @@ def validate(valloader, model):
         correct = 0
         for batch in valloader:
             sentence, label = batch
+
             sentence['input_ids'] = sentence['input_ids'].squeeze(1).cuda()
             sentence['attention_mask'] = sentence['attention_mask'].cuda()
             ss = label['input_ids'].squeeze(1)
@@ -84,7 +85,7 @@ class loader_labeled(Dataset):
         #     #self.model.resize_token_embeddings(len(self.tokenizer))
         #text1 = self.ins + f'<|startoftext|> {self.prompt}Input: {self.text[idx]}<|pad|>Output:' + '\n'
         encode_result = self.tokenizer(self.text[idx], return_tensors='pt',truncation=True,padding='max_length',max_length=1000)
-        label = self.tokenizer(self.labels[idx], return_tensors='pt',padding='max_length',max_length=1000)
+        label = self.tokenizer(self.labels[idx], return_tensors='pt',padding='max_length',max_length=10)
         return encode_result, label
 
 

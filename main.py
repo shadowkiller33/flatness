@@ -11,7 +11,7 @@ from performance import *
 
 parser = argparse.ArgumentParser(description='Take arguments from commandline')
 parser.add_argument('--mode', default="max", help='the mode to calculate flatness')
-parser.add_argument('--demo-shots', default=4, type=int, help='Type number of demos in the prompt if applicable')
+parser.add_argument('--demo-shots', default=16, type=int, help='Type number of demos in the prompt if applicable')
 parser.add_argument('--model', default='gpt2', type=str, help='model name')
 parser.add_argument('--batch-size', default=4, type=int, help='batch-size')
 parser.add_argument('--dataset', default='ag_news', type=str, help='dataset name')
@@ -36,8 +36,7 @@ instruction1 = ''
 ag_news_prompts = ['What label best describes this news article?','What is this a piece of news regarding for?',' What is the category of the following news?', 'Which is the most relevant topic of the following news?','Give the topic of the given text.','Read the text below, provide its focused topic.','Is this a piece of news regarding world, sport, business,or science?', 'Which section of a newspaper would this article likely appear in?']
 config = GPT2Config.from_pretrained("gpt2", output_attentions=True)
 config.add_cross_attention
-tokenizer = GPT2Tokenizer.from_pretrained(name,bos_token='<|startoftext|>',
-                                          eos_token='<|endoftext|>', pad_token='<|pad|>')
+tokenizer = GPT2Tokenizer.from_pretrained(name, pad_token='<|pad|>')
 #tokenizer1 = GPT2Tokenizer.from_pretrained(name)
 model = GPT2LMHeadModel.from_pretrained(name, config=config)
 # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -67,9 +66,9 @@ for prompt in ag_news_prompts:
     flatness = flat(difference,mode)
     flatness_all.append(flatness)
     for x,y in zip(demo_labels, demo_inputs):
-       instruction1 += '\n' + 'Input:' + y + 'Output:' + dict[str(x)]
+       instruction1 += '\n' + 'Input:' + y + '\n' + 'Output:' + dict[str(x)]
     for i in range(len(test_inputs)):
-        test_inputs[i] = instruction1 + '\n' + 'Input:' + test_inputs[i] + 'Output:'
+        test_inputs[i] = instruction1 + '\n' + 'Input:' + test_inputs[i] + '\n' + 'Output:'
     acc = score(instruction1,model,tokenizer,test_inputs, test_labels,batch_size,prompt)
     performance_all.append(acc)
 
