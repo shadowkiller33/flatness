@@ -8,6 +8,7 @@ from operator import itemgetter
 import random
 from tqdm import tqdm
 import argparse
+from transformers import pipeline, set_seed
 from torch.utils.data import Dataset
 import torch.nn.functional as F
 import torch.nn as nn
@@ -51,11 +52,12 @@ def validate(valloader, model):
         for batch in valloader:
             sentence, label = batch
 
-            sentence['input_ids'] = sentence['input_ids'].squeeze(1).cuda()
+            sentence['input_ids'] = sentence['input_ids'].cuda()
             sentence['attention_mask'] = sentence['attention_mask'].cuda()
             ss = label['input_ids'].squeeze(1)
-            logits = model(**sentence).logits[:, -1, :]
-            preds = torch.argmax(logits,dim=1)
+            output = model(**sentence, return_dict=True)
+            logit = output.logits[0][-1:]
+            preds = torch.argmax(logit,dim=1)
             labels = ss[:, 0]
             correct += (np.array(preds.cpu()) ==  np.array(labels)).sum()
             total_sample += preds.shape[0]
@@ -84,8 +86,8 @@ class loader_labeled(Dataset):
         #     self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         #     #self.model.resize_token_embeddings(len(self.tokenizer))
         #text1 = self.ins + f'<|startoftext|> {self.prompt}Input: {self.text[idx]}<|pad|>Output:' + '\n'
-        encode_result = self.tokenizer(self.text[idx], return_tensors='pt',truncation=True,padding='max_length',max_length=1000)
-        label = self.tokenizer(self.labels[idx], return_tensors='pt',padding='max_length',max_length=10)
+        encode_result = self.tokenizer(self.text[idx], return_tensors='pt')
+        label = self.tokenizer(self.labels[idx], return_tensors='pt')
         return encode_result, label
 
 
@@ -118,3 +120,36 @@ def pashuffle(string, perc=10):
 
     data[a], data[a+gap] = data[a+gap], data[a]
     return " ".join(data)
+
+def match(test_inputs, test_labels,model,tokenizer1):
+    count = 0
+    acc = 0
+    pred = []
+    labels = []
+    for (sentence,label) in zip(test_inputs,test_labels):
+        generation = model.predict_next(sentence, 1)
+        pred.append(generation[0])
+        labels.append(label)
+        if generation[0].lower() == label:
+            acc += 1
+        count += 1
+    print(acc/count)
+    return acc/count
+
+
+def eval_generation(test_inputs, test_labels,model,tokenizer1):
+    count = 0
+    acc = 0
+    pred = []
+    labels = []
+    generator = pipeline('text-generation', model='gpt2', device = 0)
+    for (sentence,label) in zip(test_inputs,test_labels):
+        generation = generator(sentence, max_length = 1, num_return_sequences=1)[0]['generated_text']
+        ss = generation.split(':')[-1].lower()
+        pred.append(ss)
+        labels.append(label)
+        if ss == label:
+            acc += 1
+        count += 1
+    #print(acc/count)
+    return acc/count
