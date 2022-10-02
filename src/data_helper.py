@@ -34,6 +34,7 @@ class DataHelper:
     def get_in_context_prompt(self, ins):
         for x, y in zip(self.demo_labels, self.demo_inputs):
             ins += "\n" + "Input:" + y + "\n" + "Output:" + self.label_dict[str(x)]
+
         prompts = deepcopy(self.test_inputs)
         for i in range(len(self.test_inputs)):
             prompts[i] = ins + "\n" + "Input:" + self.test_inputs[i] + "\n" + "Output:"

@@ -32,6 +32,8 @@ def main(args):
 
         # append demos for predictions
         prompt_with_demo, prompt_label = data_helper.get_in_context_prompt(prompt)
+        # print(len(prompt_with_demo))  # 7600
+        # print(len(prompt_with_demo[0]))  # 4338
 
         acc = scorer.score_acc(generator, prompt_with_demo, prompt_label)
         print(f"Accuracy: {acc}")

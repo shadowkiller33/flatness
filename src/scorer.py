@@ -15,7 +15,7 @@ class Scorer:
         self.tokenizer = tokenizer
 
     def score_acc(self, generator, test_inputs, test_labels):
-        # FIXME: max-seq-len is hard coded for now
+        # FIXME: max-seq-len is hard coded for now, and :20 should be removed
         test_dataset = loader_labeled(
             test_inputs[:20],
             test_labels[:20],

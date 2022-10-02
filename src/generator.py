@@ -10,7 +10,8 @@ class Generator:
         # TODO : make this general as a model card selection
         self.config = GPT2Config.from_pretrained(name, output_attentions=True)
         self.config.add_cross_attention
-        self.tokenizer = GPT2Tokenizer.from_pretrained(name, pad_token="<|pad|>")
+        # self.tokenizer = GPT2Tokenizer.from_pretrained(name, pad_token="<|pad|>")
+        self.tokenizer = GPT2Tokenizer.from_pretrained(name)
         self.model = GPT2LMHeadModel.from_pretrained(name, config=self.config)
         self.model.resize_token_embeddings(len(self.tokenizer))
         self.model.eval().cuda()
@@ -24,6 +25,7 @@ class Generator:
             padding="max_length",
             max_length=30,
         ).to("cuda")
+
         logits = self.model(token, return_dict=True)
         attention = logits["attentions"][0][-1].squeeze(0)
         return attention
@@ -44,6 +46,7 @@ class Generator:
                 correct += (np.array(preds.cpu()) == np.array(labels)).sum()
                 total_sample += preds.shape[0]
             acc_total = correct / total_sample
+
         return acc_total
 
     def get_tokenizer(self):
