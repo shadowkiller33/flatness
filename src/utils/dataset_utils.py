@@ -10,27 +10,16 @@ class loader_labeled(Dataset):
         dataset_label,
         tokenizer,
         max_seq_len,
-        instruction,
-        model,
-        prompt,
     ):
         self.tokenizer = tokenizer
         self.text = dataset_text
         self.labels = dataset_label
         self.max_seq_len = max_seq_len
-        self.model = model
-        self.ins = instruction
-        self.trans_dist = {}
-        self.prompt = prompt
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        # if self.tokenizer.pad_token is None:
-        #     self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        #     #self.model.resize_token_embeddings(len(self.tokenizer))
-        # text1 = self.ins + f'<|startoftext|> {self.prompt}Input: {self.text[idx]}<|pad|>Output:' + '\n'
         encode_result = self.tokenizer(
             self.text[idx],
             return_tensors="pt",
@@ -49,8 +38,6 @@ def lowercase_list(lst):
 
 
 def create_set(data, demo_num, seed, dict):
-    from random import sample
-
     random.seed(seed)
     test_inputs = [x["text"] for x in data["test"]]
     test_labels = [dict[str(x["label"])] for x in data["test"]]
