@@ -14,9 +14,9 @@ def score(candidate,model,tokenizer,test_inputs, test_labels,eval_batch_size,pro
 def flat(input, mode = 'max'):
     if mode == 'mean':
         avg_tensor = torch.mean(torch.stack(input))
-        normalization = reduce(lambda x, y: x*y, list(avg_tensor.size()))
-        mean = torch.sum(avg_tensor)/normalization
-        return mean.detach().cpu().item()
+        #normalization = reduce(lambda x, y: x*y, list(avg_tensor.size()))
+        #mean = torch.sum(avg_tensor)/normalization
+        return avg_tensor.detach().cpu().item()
 
     elif mode == 'max':
         max_tensor = torch.max(torch.stack(input))

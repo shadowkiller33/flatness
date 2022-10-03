@@ -115,8 +115,8 @@ def create_set(data,demo_num,seed,dict):
 def pashuffle(string, perc=10):
     data = string.split()
     L = len(data)
-    gap = random.randint(1, 3)
-    a = random.randint(0, L-4)
+    gap = 1
+    a = random.randint(0, L-2)
 
     data[a], data[a+gap] = data[a+gap], data[a]
     return " ".join(data)
