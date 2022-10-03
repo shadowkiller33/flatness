@@ -1,7 +1,11 @@
 from utils import *
 import torch.utils.data as Data
 from functools import reduce
-
+import pandas as pd
+import json
+import pickle
+import numpy as np
+from utils import ROOT_DIR
 def score(candidate,model,tokenizer,test_inputs, test_labels,eval_batch_size,prompt):
     test_dataset = loader_labeled(
         test_inputs, test_labels, tokenizer, 1000, candidate, model,prompt)
@@ -28,11 +32,7 @@ def flat(input, mode = 'max'):
         return max_tensor.detach().cpu().item()
 
 
-import pandas as pd
-import json
-import pickle
-import numpy as np
-from utils import ROOT_DIR
+
 
 
 def load_sst2():
