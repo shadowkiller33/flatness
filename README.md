@@ -19,3 +19,4 @@ CUDA_VISIBLE_DEVICES=0 python run_classification.py \
 * `all_shots`: Number of demonstrations
 * `model`: the selected model
 * `dataset`: dataset name
+* `subsample_test_set`: size of test set to use to speed up eval. None means using all test set
