@@ -2,20 +2,20 @@
 This is a simpe implementation of the **Prompt Flatness**
 
 ```bash
-python main.py \
-    --mode max \
-    --demo-shots 8 \
-    --model gpt2 \
-    --batch-size 16 \
-    --dataset ag_news \
-    --seed 42 \
-
+CUDA_VISIBLE_DEVICES=0 python run_classification.py \
+--model="gpt2" \
+--dataset=agnews \
+--num_seeds=1 \
+--mode = 'mean'
+--all_shots = 4 \
+--subsample_test_set=300 \
+--approx
 ```
 
 * `mode`: the mode to calculate flatness
-  * `average`: Standard fine-tuning
-  * `max`: Prompt-based fine-tuning.
-  * `average-max`: Prompt-based fine-tuning with demonstrations.
-* `demo-shots`: Number of demonstrations
+  * `mean`: L1 distance
+  * `max`: Maximum of difference (L1)
+  * `mean-max`: combine
+* `all_shots`: Number of demonstrations
 * `model`: the selected model
 * `dataset`: dataset name
