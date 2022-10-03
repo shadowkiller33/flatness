@@ -1,11 +1,14 @@
 # editor
 .idea/
 .vscode/
-
+data/
+dataset/
+datasets/
 # special dir
 checkpoints/
 output/
 outputs/
+saved_results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

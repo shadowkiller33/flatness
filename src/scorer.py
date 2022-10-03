@@ -4,6 +4,7 @@ from scipy.stats import spearmanr, pearsonr, kendalltau
 import logging
 import torch
 from functools import reduce
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,9 @@ class Scorer:
     def flat(self, input):
         if self.mode == "mean":
             avg_tensor = torch.mean(torch.stack(input))
-            normalization = reduce(lambda x, y: x * y, list(avg_tensor.size()))
-            mean = torch.sum(avg_tensor) / normalization
-            return mean.detach().cpu().item()
+            # normalization = reduce(lambda x, y: x*y, list(avg_tensor.size()))
+            # mean = torch.sum(avg_tensor)/normalization
+            return avg_tensor.detach().cpu().item()
 
         elif self.mode == "max":
             max_tensor = torch.max(torch.stack(input))
@@ -57,3 +58,37 @@ class Scorer:
             avg_tensor = torch.mean(torch.stack(input))
             max_tensor = torch.max(avg_tensor)
             return max_tensor.detach().cpu().item()
+
+    def eval_accuracy(self, all_label_probs, test_labels, mode=None, p_cf=None):
+        # evaluate the accuracy with and without contextual calibration
+        num_classes = all_label_probs.shape[1]
+        if p_cf is None:
+            # do not calibrate
+            W = np.identity(num_classes)
+            b = np.zeros([num_classes, 1])
+        else:
+            # calibrate
+            if mode == "diagonal_W":
+                W = np.linalg.inv(np.identity(num_classes) * p_cf)
+                b = np.zeros([num_classes, 1])
+            elif mode == "identity_W":
+                W = np.identity(num_classes)
+                b = -1 * np.expand_dims(p_cf, axis=-1)
+            else:
+                assert False
+
+        correctness_list = []
+        assert len(all_label_probs) == len(test_labels)
+        for label_probs, true_label in zip(all_label_probs, test_labels):
+            label_probs = label_probs / np.sum(label_probs)  # normalize to 1
+
+            calibrate_label_probs = (
+                np.matmul(W, np.expand_dims(label_probs, axis=-1)) + b
+            )
+
+            ans_label = np.argmax(calibrate_label_probs)
+            if ans_label == true_label:
+                correctness_list.append(1)
+            else:
+                correctness_list.append(0)
+        return np.mean(correctness_list)
