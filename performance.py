@@ -6,14 +6,7 @@ import json
 import pickle
 import numpy as np
 from utils import ROOT_DIR
-def score(candidate,model,tokenizer,test_inputs, test_labels,eval_batch_size,prompt):
-    test_dataset = loader_labeled(
-        test_inputs, test_labels, tokenizer, 1000, candidate, model,prompt)
-    test_loader = Data.DataLoader(
-        dataset=test_dataset, batch_size=eval_batch_size, shuffle=False)
-    acc_total = validate(test_loader, model)
-    print(acc_total)
-    return acc_total
+
 
 def flat(input, mode = 'max'):
     if mode == 'mean':

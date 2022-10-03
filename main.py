@@ -1,5 +1,5 @@
 import argparse
-from data_utils import load_dataset
+from performance import *
 from utils import *
 from tqdm import tqdm
 def main(models, datasets, all_shots, num_seeds, subsample_test_set, api_num_log_prob, approx, use_saved_results, bs, mode):
