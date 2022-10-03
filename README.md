@@ -2,7 +2,7 @@
 This is a simpe implementation of the **Prompt Flatness**
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python run_classification.py \
+CUDA_VISIBLE_DEVICES=0 python main.py \
 --model="gpt2" \
 --dataset=agnews \
 --num_seeds=1 \
