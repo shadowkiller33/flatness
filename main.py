@@ -73,7 +73,7 @@ for prompt in ag_news_prompts:
        instruction1 += '\n' + 'Input:' + y + '\n' + 'Output:' + dict[str(x)]
     for i in range(len(test_inputs)):
         test_inputs[i] = instruction1 + '\n' + 'Input:' + test_inputs[i] + '\n' + 'Output:'
-    acc = eval_generation(test_inputs[:20], test_labels[:20],model,tokenizer)
+    acc = eval_generation(test_inputs, test_labels,model,tokenizer)
     #acc = score(instruction1,model,tokenizer1,test_inputs, test_labels,batch_size,prompt)
     performance_all.append(acc)
 
