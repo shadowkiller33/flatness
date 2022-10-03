@@ -20,3 +20,5 @@ CUDA_VISIBLE_DEVICES=0 python run_classification.py \
 * `model`: the selected model
 * `dataset`: dataset name
 * `subsample_test_set`: size of test set to use to speed up eval. None means using all test set
+
+To set your own custom prompts, you can change it at promptset in main.py
