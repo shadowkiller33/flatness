@@ -34,13 +34,13 @@ class Scorer:
         b = spearmanr(flatness, performance)[0]
         c = kendalltau(flatness, performance)[0]
         print(
-            f"The pearson correlation between {self.mode} flatness and human score is {a}"
+            f"The pearson correlation between {self.mode} flatness and acc is {a}"
         )
         print(
-            f"The spearman correlation between {self.mode} flatness and human score is {b}"
+            f"The spearman correlation between {self.mode} flatness and acc is {b}"
         )
         print(
-            f"The kendall correlation between {self.mode} flatness and human score is {c}"
+            f"The kendall correlation between {self.mode} flatness and acc is {c}"
         )
 
     def flat(self, input):
