@@ -29,8 +29,9 @@ class Generator:
         ).to("cuda")
 
         logits = self.model(token, return_dict=True)
-        attention = logits["attentions"][0][-1].squeeze(0)
-        return attention
+        attention = [logits["attentions"][i].squeeze(0) for i in range(len(logits["attentions"]))]#logits["attentions"][-1]
+        cat = torch.cat(attention)
+        return cat
 
     def get_p_content_free(
         self, params, train_sentences, train_labels, content_free_inputs=("N/A",)
