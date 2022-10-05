@@ -217,6 +217,14 @@ if __name__ == "__main__":
         help="whether to load the results from pickle files and not run the model",
     )
     parser.add_argument(
+        "--method",
+        dest="method",
+        action="store_const",
+        type=str,
+        default='flatness',
+        help="two options: flatness or mutual information",
+    )
+    parser.add_argument(
         "--approx",
         dest="approx",
         action="store_const",
