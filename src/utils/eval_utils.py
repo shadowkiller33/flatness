@@ -20,7 +20,7 @@ def sensitivity_compute(output, original_label):
         ss = [x == target for x in slice]
         match = sum(ss)
         all += match
-    sensitivity = sum/L
+    sensitivity = all/L
     return sensitivity
 
 def chunk_size_helper(params):
