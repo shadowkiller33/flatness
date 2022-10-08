@@ -29,7 +29,7 @@ class DataHelper:
                 f"Download Dataset for {dataset_name} to {self.data_path} first!!"
             )
 
-    def get_in_context_prompt(self, params, ins, freeze_test_set=True):
+    def get_in_context_prompt(self, params, ins, seed=42, freeze_test_set=True):
         (
             all_train_sentences,
             all_train_labels,
@@ -51,7 +51,7 @@ class DataHelper:
             )
             print(f"selecting {len(test_labels)} subsample of test set")
         # retrieve train set
-        np.random.seed(params["seed"])
+        np.random.seed(seed)
         train_sentences, train_labels = random_sampling(
             all_train_sentences, all_train_labels, params["num_shots"]
         )
@@ -64,8 +64,8 @@ class DataHelper:
     @staticmethod
     def get_pertubed_set(prompt):
         out = set()
-        while len(out) < 10:
+        while len(out) < 7:
             sss = pashuffle(prompt, perc=10)
-            if sss + "\n" != prompt:
+            if sss != prompt:
                 out.add(sss)
         return out

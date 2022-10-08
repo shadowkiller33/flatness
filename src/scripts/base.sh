@@ -1,17 +1,16 @@
 #!/bin/bash
-#SBATCH -A danielk_gpu​
-#SBATCH --partition=a100​
-#SBATCH --gres=gpu:1​
-#SBATCH -N 1​
-#SBATCH --ntasks-per-node=12​
+#SBATCH -A danielk_gpu
+#SBATCH --partition=a100
+#SBATCH --gres=gpu:1
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=12
+#SBATCH --output=gpt2xl-ag-%x.%j.out
+#SBATCH --time=12:00:00
+module load anaconda
+conda info --envs
+source activate flat
 
 
-source /etc/profile.d/modules.sh
-module load python
-
-python main.py --model gpt2   --dataset agnews   --all_shots 8 --num_seeds 1   --mode mean  --approx --data-dir /home/lshen30/flat/data
-#### execute code and write output file to OUT-24log.
-#time mpiexec ./code-mvapich.x > OUT-24log
-echo "Finished with job $SLURM_JOBID"
-
-#### mpiexec by default launches number of tasks requested
+proj_dir=/home/lshen30/flat
+export PYTHONPATH="/home/lshen30/flat"
+python $proj_dir/src/main.py  --model gpt2-xl  --dataset agnews  --all_shots 4  --bs 12 --num_seeds 1  --subsample_test_set 500  --mode mean  --approx  --data-dir /home/lshen30/flat/data

@@ -8,7 +8,10 @@ from copy import deepcopy
 import logging
 import numpy as np
 import torch
-
+from scipy.special import entr
+from scipy.special import softmax
+from random import randrange
+import sys
 logger = logging.getLogger(__name__)
 
 
@@ -70,17 +73,20 @@ def save_results(params_list):
 
         performance_all = []
         flatness_all = []
+        mutual_info_all = []
+        sensitivity_all = []
         for prompt in DataHelper.get_prompts():
+
             perturbed = DataHelper.get_pertubed_set(prompt)
-            difference = []
-            attention = generator.get_logits(prompt)
-
-            for perturbed_sentence in perturbed:
-                attention_p = generator.get_logits(perturbed_sentence)
-                difference.append(torch.abs(attention_p - attention))
-
-            flatness = scorer.flat(difference)
-            flatness_all.append(flatness)
+            # difference = []
+            # attention = generator.get_logits(prompt)
+            #
+            # for perturbed_sentence in perturbed:
+            #     attention_p = generator.get_logits(perturbed_sentence)
+            #     difference.append(torch.abs(attention_p - attention))
+            #
+            # flatness = scorer.flat(difference)
+            # flatness_all.append(flatness)
 
             # append demos for predictions
             (
@@ -95,15 +101,39 @@ def save_results(params_list):
             all_label_probs = generator.get_label_probs(
                 params, raw_resp_test, train_sentences, train_labels, test_sentences
             )
-            # calculate P_cf
+            original_labels = np.argmax(all_label_probs, axis=1)
+            normalized_probs = softmax(all_label_probs, axis=1)
+            avg_prob = np.average(normalized_probs, axis=0)
+            entropy1 = np.average(entr(normalized_probs).sum(axis=1))
+            entropy2 = entr(avg_prob).sum()
+            mutual_info = entropy2 - entropy1
+            mutual_info_all.append(mutual_info)
             content_free_inputs = ["N/A", "", "[MASK]"]
+            output = []
+            for perturbed_prompt in perturbed:
+                (
+                    train_sentences,
+                    train_labels,
+                    test_sentences,
+                    test_labels,
+                ) = data_helper.get_in_context_prompt(params, perturbed_prompt, seed=randrange(1000))
+                raw_resp_test = generator.get_model_response(
+                    params, train_sentences, train_labels, test_sentences
+                )
+                all_label_probs111 = generator.get_label_probs(
+                    params, raw_resp_test, train_sentences, train_labels, test_sentences
+                )
+                labels111 = np.argmax(all_label_probs111, axis=1)
+                sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
+                output.append(sensitivity)
+            sensitivity_all.append(sum(output)/len(output))
             p_cf = generator.get_p_content_free(
                 params,
                 train_sentences,
                 train_labels,
                 content_free_inputs=content_free_inputs,
             )
-            acc_original = scorer.eval_accuracy(all_label_probs, test_labels)
+            acc_original = 0#%scorer.eval_accuracy(all_label_probs, test_labels)
             acc_calibrated = scorer.eval_accuracy(
                 all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
             )
@@ -135,7 +165,10 @@ def save_results(params_list):
             if "prompt_func" in result_to_save["params"].keys():
                 params_to_save["prompt_func"] = None
             save_pickle(params, result_to_save)
-        scorer.correlation(flatness_all, performance_all)
+        #scorer.Flatness_correlation(flatness_all, performance_all)
+        scorer.sen_correlation(sensitivity_all, performance_all)
+        scorer.MI_correlation(mutual_info_all, performance_all)
+        scorer.ours_correlation(sensitivity_all,mutual_info_all, performance_all)
         print_results(result_tree)
 
 
@@ -215,14 +248,6 @@ if __name__ == "__main__":
         const=True,
         default=False,
         help="whether to load the results from pickle files and not run the model",
-    )
-    parser.add_argument(
-        "--method",
-        dest="method",
-        action="store_const",
-        type=str,
-        default='flatness',
-        help="two options: flatness or mutual information",
     )
     parser.add_argument(
         "--approx",
