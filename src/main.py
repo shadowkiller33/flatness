@@ -1,5 +1,6 @@
 import argparse
 from ast import Return
+from src.utils.eval_utils import sensitivity_compute
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
@@ -25,6 +26,7 @@ def main(args):
         "mode": args["mode"],
         "data_dir": args["data_dir"],
         "seed": args["num_seeds"],
+        "perturbed_num": args['perturbed_num']
     }
 
     # list of all experiment parameters to run
@@ -77,7 +79,7 @@ def save_results(params_list):
         sensitivity_all = []
         for prompt in DataHelper.get_prompts():
 
-            perturbed = DataHelper.get_pertubed_set(prompt)
+
             # difference = []
             # attention = generator.get_logits(prompt)
             #
@@ -110,13 +112,17 @@ def save_results(params_list):
             mutual_info_all.append(mutual_info)
             content_free_inputs = ["N/A", "", "[MASK]"]
             output = []
-            for perturbed_prompt in perturbed:
+
+            perturbed = DataHelper.get_pertubed_set(prompt, params['perturbed_num'])# get perturbed data
+            prompt_orders = DataHelper.get_prompt_order(train_sentences, train_labels, params['perturbed_num'])
+            for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
                 (
-                    train_sentences,
-                    train_labels,
+                    _,
+                    _,
                     test_sentences,
                     test_labels,
-                ) = data_helper.get_in_context_prompt(params, perturbed_prompt, seed=randrange(1000))
+                ) = data_helper.get_in_context_prompt(params, perturbed_prompt)
+                train_sentences, train_labels = order
                 raw_resp_test = generator.get_model_response(
                     params, train_sentences, train_labels, test_sentences
                 )
@@ -124,9 +130,10 @@ def save_results(params_list):
                     params, raw_resp_test, train_sentences, train_labels, test_sentences
                 )
                 labels111 = np.argmax(all_label_probs111, axis=1)
-                sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
-                output.append(sensitivity)
-            sensitivity_all.append(sum(output)/len(output))
+                #sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
+                output.append(labels111)
+            sensitivity = sensitivity_compute(output, original_labels)
+            sensitivity_all.append(sensitivity)
             p_cf = generator.get_p_content_free(
                 params,
                 train_sentences,
@@ -195,6 +202,14 @@ if __name__ == "__main__":
         action="store",
         required=True,
         help="num seeds for the training set",
+        type=int,
+    )
+    parser.add_argument(
+        "--perturbed_num",
+        dest="perturbed_num",
+        action="store",
+        required=True,
+        help="num of samples for the perturbed set",
         type=int,
     )
     parser.add_argument(

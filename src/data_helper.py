@@ -62,10 +62,23 @@ class DataHelper:
         return ag_news_prompts
 
     @staticmethod
-    def get_pertubed_set(prompt):
+    def get_pertubed_set(prompt, num = 7):
         out = set()
-        while len(out) < 7:
-            sss = pashuffle(prompt, perc=10)
+        while len(out) < num:
+            sss = pashuffle(prompt, perc = 10)
             if sss != prompt:
                 out.add(sss)
         return out
+
+    @staticmethod
+    def get_prompt_order(train_sentences, train_labels, num = 7):
+        import random
+        order_list = []
+        c = list(zip(train_sentences, train_labels))
+        for i in range(num):
+            random.shuffle(c)
+            train_sentences, train_labels = zip(*c)
+            if (train_sentences, train_labels) not in order_list:
+                order_list.append((train_sentences, train_labels))
+
+        return order_list

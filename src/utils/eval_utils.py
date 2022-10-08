@@ -8,6 +8,21 @@ def chunks(lst, n):
         yield lst[i : i + n]
 
 
+def sensitivity_compute(output, original_label):
+    L = len(output[0])
+    num = len(output)
+    output = np.array(output)
+    #original_labels = np.array(original_label)
+    all = 0
+    for i in range(L):
+        slice = output[:,i].tolist()
+        target = original_label[i]
+        ss = [x == target for x in slice]
+        match = sum(ss)
+        all += match
+    sensitivity = sum/L
+    return sensitivity
+
 def chunk_size_helper(params):
     # Set the batch size (the size of the chunks determines the batch size). Default to 4 for GPT-2 and 20 for OpenAI if
     # no batch size is specified.
