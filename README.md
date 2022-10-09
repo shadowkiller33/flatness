@@ -25,7 +25,7 @@ To set your own custom prompts, you can change it at promptset in [main.py](http
 
 ## Result Tree Printout Format
 For each experiment, we store a result tree in the following format:
-```json
+```
 {
   seed_id: {
     id: {
