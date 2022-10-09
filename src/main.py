@@ -136,7 +136,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         )
         for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
             (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
-                params, perturbed_prompt, verbose=verbose
+                params, perturbed_prompt, verbose=False
             )
             train_sentences, train_labels = order
             raw_resp_test = generator.get_model_response(

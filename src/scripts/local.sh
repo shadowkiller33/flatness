@@ -11,4 +11,5 @@ python $proj_dir/src/main.py  \
     --bs 1 --num_seeds 3  --subsample_test_set 10 \
     --mode mean  --approx \
     --data-dir $proj_dir/data \
-    --output-dir $proj_dir/output
+    --output-dir $proj_dir/output \
+    --verbose
