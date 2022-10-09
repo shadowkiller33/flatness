@@ -29,7 +29,9 @@ class Generator:
         ).to("cuda")
 
         logits = self.model(token, return_dict=True)
-        attention = [logits["attentions"][i].squeeze(0) for i in range(len(logits["attentions"]))]#logits["attentions"][-1]
+        attention = [
+            logits["attentions"][i].squeeze(0) for i in range(len(logits["attentions"]))
+        ]  # logits["attentions"][-1]
         cat = torch.cat(attention)
         return cat
 
@@ -75,7 +77,7 @@ class Generator:
         # Fill in the labels that is in the top k prob
         all_label_probs = []
         all_missing_positions = []
-        for i, ans in tqdm(enumerate(raw_resp)):
+        for i, ans in tqdm(enumerate(raw_resp), disable=True):
             top_logprobs = ans["logprobs"]["top_logprobs"][
                 0
             ]  # [0] since we only ask for complete one more token

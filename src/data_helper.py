@@ -29,7 +29,9 @@ class DataHelper:
                 f"Download Dataset for {dataset_name} to {self.data_path} first!!"
             )
 
-    def get_in_context_prompt(self, params, ins, seed=42, freeze_test_set=True):
+    def get_in_context_prompt(
+        self, params, ins, seed=42, freeze_test_set=True, verbose=False
+    ):
         (
             all_train_sentences,
             all_train_labels,
@@ -40,7 +42,8 @@ class DataHelper:
         if params["subsample_test_set"] is None:
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
-            print(f"selecting full test set ({len(all_test_labels)} examples)")
+            if verbose:
+                print(f"selecting full test set ({len(all_test_labels)} examples)")
         else:
             if freeze_test_set:
                 np.random.seed(0)  # always use seed 0 result if freeze
@@ -49,7 +52,8 @@ class DataHelper:
             test_sentences, test_labels = random_sampling(
                 all_test_sentences, all_test_labels, params["subsample_test_set"]
             )
-            print(f"selecting {len(test_labels)} subsample of test set")
+            if verbose:
+                print(f"selecting {len(test_labels)} subsample of test set")
         # retrieve train set
         np.random.seed(seed)
         train_sentences, train_labels = random_sampling(

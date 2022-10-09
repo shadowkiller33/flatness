@@ -29,11 +29,11 @@ def main(args):
         "perturbed_num": args["perturbed_num"],
     }
     model = args["models"]
+    verbose = args["verbose"]
     # list of all experiment parameters to run
     all_params = []
     for dataset in args["datasets"]:
         for num_shots in args["all_shots"]:
-            out_dir = f"{args['output_dir']}/{dataset}"
             data_helper = DataHelper(args["data_dir"], dataset)
             for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
                 for seed in args["seeds"]:
@@ -43,35 +43,21 @@ def main(args):
                     p["seed"] = seed
                     p["dataset"] = dataset
                     p["num_shots"] = num_shots
-                    p[
-                        "expr_name"
-                    ] = f"{p['dataset']}_{model}_{p['num_shots']}shot_{repr(p['subsample_test_set'])}_prompt{prompt_id}_subsample_seed{seed}"
-                    p["output_dir"] = out_dir
                     all_params.append(p)
 
+    filename = (
+        f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}.pkl"
+    )
     if args["use_saved_results"]:
-        load_results(all_params, model)
+        load_results(args["output_dir"], filename)
     else:
-        save_results(all_params, model)
+        save_results(all_params, model, args["output_dir"], filename, verbose=verbose)
 
 
-def load_results(params_list, model_name):
+def load_results(path, filename):
     # load saved results from model
-    result_tree = dict()
-    for params in params_list:
-        data_helper = DataHelper(
-            params["data_dir"], params["dataset"], params["num_shots"], params["seed"]
-        )
-        for prompt_id, prompt in enumerate(data_helper.get_prompts()):
-            saved_result = load_pickle(prompt_id, params)
-            keys = [params["dataset"], params["model"], params["num_shots"]]
-            node = result_tree  # root
-            for k in keys:
-                if not (k in node.keys()):
-                    node[k] = dict()
-                node = node[k]
-            node[params["seed"]] = saved_result["accuracies"]
-            print_results(result_tree)
+    result_table = load_pickle(path, filename)
+    print_results(result_table)
 
 
 def compute_flatness():
@@ -102,12 +88,14 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
             table[seed][prompt_id][entry_name] = result
 
 
-def save_results(params_list, model_name):
-    result_tree = dict()
+def save_results(params_list, model_name, path, filename, verbose=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
     for params in params_list:
-        print(f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}")
+        if verbose:
+            print(
+                f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
+            )
         data_helper = DataHelper(params["data_dir"], params["dataset"])
         scorer = Scorer(params["mode"], params["bs"], generator.get_tokenizer())
 
@@ -121,7 +109,7 @@ def save_results(params_list, model_name):
             train_labels,
             test_sentences,
             test_labels,
-        ) = data_helper.get_in_context_prompt(params, prompt, seed)
+        ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
         raw_resp_test = generator.get_model_response(
             params, train_sentences, train_labels, test_sentences
         )
@@ -147,12 +135,9 @@ def save_results(params_list, model_name):
             train_sentences, train_labels, params["perturbed_num"]
         )
         for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
-            (
-                _,
-                _,
-                test_sentences,
-                test_labels,
-            ) = data_helper.get_in_context_prompt(params, perturbed_prompt)
+            (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
+                params, perturbed_prompt, verbose=verbose
+            )
             train_sentences, train_labels = order
             raw_resp_test = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences
@@ -172,75 +157,81 @@ def save_results(params_list, model_name):
             train_labels,
             content_free_inputs=content_free_inputs,
         )
-        acc_original = 0  #%scorer.eval_accuracy(all_label_probs, test_labels)
+        acc_original = scorer.eval_accuracy(all_label_probs, test_labels)
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
-        accuracies = [acc_original, acc_calibrated]
-        print(f"Accuracies: {accuracies}")
-        print(f"p_cf      : {p_cf}")
+
+        update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
+        update_result_dict(
+            result_table, prompt_id, seed, prompt, "acc_c", acc_calibrated
+        )
+        update_result_dict(result_table, prompt_id, seed, prompt, "pc_f", p_cf.tolist())
         update_result_dict(
             result_table, prompt_id, seed, prompt, "perf", acc_calibrated
         )
+        # save non-metric information
+        # this might save too much information, disabled for now
+        if False:
+            update_result_dict(
+                result_table,
+                prompt_id,
+                seed,
+                prompt,
+                "train_sentences",
+                train_sentences,
+            )
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "train_labels", train_labels
+            )
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "test_sentences", test_sentences
+            )
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "test_labels", test_labels
+            )
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "raw_resp_test", raw_resp_test
+            )
+            update_result_dict(
+                result_table,
+                prompt_id,
+                seed,
+                prompt,
+                "all_label_probs",
+                all_label_probs,
+            )
 
-        # TODO: need better ways to handle the print tree
-        # # serialize results for reproduction
-        # keys = [params["dataset"], params["model"], params["num_shots"]]
-        # node = result_tree  # root
-        # for k in keys:
-        #     if not (k in node.keys()):
-        #         node[k] = dict()
-        #     node = node[k]
-        # node[params["seed"]] = accuracies
-
-        # # save to file
-        # result_to_save = dict()
-        # params_to_save = deepcopy(params)
-        # result_to_save["prompt"] = prompt
-        # result_to_save["params"] = params_to_save
-        # result_to_save["train_sentences"] = train_sentences
-        # result_to_save["train_labels"] = train_labels
-        # result_to_save["test_sentences"] = test_sentences
-        # result_to_save["test_labels"] = test_labels
-        # result_to_save["raw_resp_test"] = raw_resp_test
-        # result_to_save["all_label_probs"] = all_label_probs
-        # result_to_save["p_cf"] = p_cf
-        # result_to_save["accuracies"] = accuracies
-        # if "prompt_func" in result_to_save["params"].keys():
-        #     params_to_save["prompt_func"] = None
-        # save_pickle(prompt_id, params, result_to_save)
-
-    # Evaluate Result using saved dictionaries
-    # scorer.Flatness_correlation(flatness_all, performance_all)
-    print(result_table)
-    sen_corr, mi_corr, ours_corr = [], [], []
+    # scorer.Flatness_correlation(flatness_all, performance_all)\
+    # Evaluate Correlations per seed
     for seed_id in result_table.keys():
         sen_list, mi_list, perf_list = [], [], []
         for prompt_id in result_table[seed_id]:
             sen_list.append(result_table[seed_id][prompt_id]["sen"])
             mi_list.append(result_table[seed_id][prompt_id]["mi"])
             perf_list.append(result_table[seed_id][prompt_id]["perf"])
-        sen_corr.append(scorer.sen_correlation(sen_list, perf_list))
-        mi_corr.append(scorer.MI_correlation(mi_list, perf_list))
-        ours_corr.append(scorer.ours_correlation(sen_list, mi_list, perf_list))
-    # calculate avg and variance of correlations
-    pearson_list = []
-    spearman_list = []
-    kendalltau_list = []
-    for item in sen_corr:
-        pearson_list.append(item[0])
-        spearman_list.append(item[1])
-        kendalltau_list.append(item[2])
-    print(
-        f"Avg/Var pearson correlation for Sensitivity is {np.average(np.array(pearson_list))}/{np.var(np.array(pearson_list))}"
-    )
-    print(
-        f"Avg/Var pearson correlation for Spearman is {np.average(np.array(spearman_list))}/{np.var(np.array(spearman_list))}"
-    )
-    print(
-        f"Avg/Var pearson correlation for Kendalltau is {np.average(np.array(kendalltau_list))}/{np.var(np.array(kendalltau_list))}"
-    )
-    # print_results(result_tree)
+        sen_p, sen_s, sen_k = scorer.sen_correlation(
+            sen_list, perf_list, verbose=verbose
+        )
+
+        result_table[seed_id]["sen_p"] = sen_p
+        result_table[seed_id]["sen_s"] = sen_s
+        result_table[seed_id]["sen_k"] = sen_k
+        mi_p, mi_s, mi_k = scorer.MI_correlation(mi_list, perf_list, verbose=verbose)
+
+        result_table[seed_id]["mi_p"] = mi_p
+        result_table[seed_id]["mi_s"] = mi_s
+        result_table[seed_id]["mi_k"] = mi_k
+        ours_p, ours_s, ours_k = scorer.ours_correlation(
+            sen_list, mi_list, perf_list, verbose=verbose
+        )
+
+        result_table[seed_id]["ours_p"] = ours_p
+        result_table[seed_id]["ours_s"] = ours_s
+        result_table[seed_id]["ours_k"] = ours_k
+    print(result_table)
+
+    save_pickle(path, filename, result_table)
 
 
 if __name__ == "__main__":
@@ -333,6 +324,10 @@ if __name__ == "__main__":
         const=True,
         default=False,
         help="whether to load the results from pickle files and not run the model",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
     )
     parser.add_argument(
         "--approx",
