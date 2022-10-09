@@ -229,9 +229,8 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         result_table[seed_id]["ours_p"] = ours_p
         result_table[seed_id]["ours_s"] = ours_s
         result_table[seed_id]["ours_k"] = ours_k
-    print(result_table)
-
     save_pickle(path, filename, result_table)
+    print_results(result_table)
 
 
 if __name__ == "__main__":

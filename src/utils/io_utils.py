@@ -69,19 +69,19 @@ def print_results(table):
         np.array(ours_k_list)
     )
     print("Avg/Var of sensitivity's correlation to performance:")
-    print(f"Pearson Correlation: {sen_p_avg}/{sen_p_var}")
-    print(f"Spearman Correlation: {sen_s_avg}/{sen_s_var}")
-    print(f"Kendalltau Correlation: {sen_k_avg}/{sen_k_var}")
+    print(f"Pearson Correlation: {sen_p_avg:.4}/{sen_p_var:.4}")
+    print(f"Spearman Correlation: {sen_s_avg:.4}/{sen_s_var:.4}")
+    print(f"Kendalltau Correlation: {sen_k_avg:.4}/{sen_k_var:.4}")
     print()
     print("Avg/Var of mutual information's correlation to performance:")
-    print(f"Pearson Correlation: {mi_p_avg}/{mi_p_var}")
-    print(f"Spearman Correlation: {mi_s_avg}/{mi_s_var}")
-    print(f"Kendalltau Correlation: {mi_k_avg}/{mi_k_var}")
+    print(f"Pearson Correlation: {mi_p_avg:.4}/{mi_p_var:.4}")
+    print(f"Spearman Correlation: {mi_s_avg:.4}/{mi_s_var:.4}")
+    print(f"Kendalltau Correlation: {mi_k_avg:.4}/{mi_k_var:.4}")
     print()
     print("Avg/Var of our's correlation to performance:")
-    print(f"Pearson Correlation: {ours_p_avg}/{ours_p_var}")
-    print(f"Spearman Correlation: {ours_s_avg}/{ours_s_var}")
-    print(f"Kendalltau Correlation: {ours_k_avg}/{ours_k_var}")
+    print(f"Pearson Correlation: {ours_p_avg:.4}/{ours_p_var:.4}")
+    print(f"Spearman Correlation: {ours_s_avg:.4}/{ours_s_var:.4}")
+    print(f"Kendalltau Correlation: {ours_k_avg:.4}/{ours_k_var:.4}")
     print()
 
     # calculate accuracy across seeds
@@ -115,4 +115,6 @@ def print_results(table):
         )
 
         print(f"Average/Variance of accuracy for Prompt: {prompt}")
-        print(f"Origin: {avg_acc}/{var_acc}\tCalibrated: {avg_acc_c}/{var_acc_c}")
+        print(
+            f"Origin: {avg_acc:.4}/{var_acc:.4}\tCalibrated: {avg_acc_c:.4}/{var_acc_c:.4}"
+        )
