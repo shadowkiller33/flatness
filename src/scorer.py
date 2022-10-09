@@ -33,64 +33,42 @@ class Scorer:
         a = pearsonr(flatness, performance)[0]
         b = spearmanr(flatness, performance)[0]
         c = kendalltau(flatness, performance)[0]
-        print(
-            f"The pearson correlation between {self.mode} flatness and acc is {a}"
-        )
-        print(
-            f"The spearman correlation between {self.mode} flatness and acc is {b}"
-        )
-        print(
-            f"The kendall correlation between {self.mode} flatness and acc is {c}"
-        )
+        print(f"The pearson correlation between {self.mode} flatness and acc is {a}")
+        print(f"The spearman correlation between {self.mode} flatness and acc is {b}")
+        print(f"The kendall correlation between {self.mode} flatness and acc is {c}")
+        return (a, b, c)
 
     def sen_correlation(self, flatness, performance):
         a = pearsonr(flatness, performance)[0]
         b = spearmanr(flatness, performance)[0]
         c = kendalltau(flatness, performance)[0]
-        print(
-            f"The pearson correlation between sensitivity and acc is {a}"
-        )
-        print(
-            f"The spearman correlation between sensitivity and acc is {b}"
-        )
-        print(
-            f"The kendall correlation between sensitivity and acc is {c}"
-        )
+        print(f"The pearson correlation between sensitivity and acc is {a}")
+        print(f"The spearman correlation between sensitivity and acc is {b}")
+        print(f"The kendall correlation between sensitivity and acc is {c}")
+        return (a, b, c)
 
     def MI_correlation(self, MI, performance):
         a = pearsonr(MI, performance)[0]
         b = spearmanr(MI, performance)[0]
         c = kendalltau(MI, performance)[0]
-        print(
-            f"The pearson correlation between mutual information and acc is {a}"
-        )
-        print(
-            f"The spearman correlation between mutual information and acc is {b}"
-        )
-        print(
-            f"The kendall correlation between mutual information and acc is {c}"
-        )
+        print(f"The pearson correlation between mutual information and acc is {a}")
+        print(f"The spearman correlation between mutual information and acc is {b}")
+        print(f"The kendall correlation between mutual information and acc is {c}")
+        return (a, b, c)
 
     def ours_correlation(self, flatness, MI, performance):
-        A,B,C = [],[],[]
+        A, B, C = [], [], []
         for i in range(100):
-            result = [y + 0.01*i*x for (x,y) in zip(flatness,MI)]
+            result = [y + 0.01 * i * x for (x, y) in zip(flatness, MI)]
             A.append(pearsonr(result, performance)[0])
             B.append(spearmanr(result, performance)[0])
             C.append(kendalltau(result, performance)[0])
         index = A.index(max(A))
-        print(
-            f"The best alpha (weighted factor) is {index}"
-        )
-        print(
-            f"The pearson correlation between ours and acc is {A[index]}"
-        )
-        print(
-            f"The spearman correlation between ours flatness and acc is {B[index]}"
-        )
-        print(
-            f"The kendall correlation between ours flatness and acc is {C[index]}"
-        )
+        print(f"The best alpha (weighted factor) is {index}")
+        print(f"The pearson correlation between ours and acc is {A[index]}")
+        print(f"The spearman correlation between ours flatness and acc is {B[index]}")
+        print(f"The kendall correlation between ours flatness and acc is {C[index]}")
+        return (A[index], B[index], C[index])
 
     def flat(self, input):
         if self.mode == "mean":
@@ -141,4 +119,3 @@ class Scorer:
             else:
                 correctness_list.append(0)
         return np.mean(correctness_list)
-

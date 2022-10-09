@@ -1,18 +1,14 @@
 import os
 from copy import deepcopy
+from pathlib import Path
 import pickle
 import numpy as np
 
-ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
-SAVE_DIR = os.path.join(ROOT_DIR, "saved_results")
-if not os.path.isdir(SAVE_DIR):
-    os.mkdir(SAVE_DIR)
-    print(f"mkdir at {SAVE_DIR} for saving results")
 
-
-def load_pickle(params):
+def load_pickle(prompt_id, params):
     # load saved results from model
-    file_name = os.path.join(SAVE_DIR, f"{params['expr_name']}.pkl")
+    output_dir = f"{params['output_dir']}/{prompt_id}"
+    file_name = os.path.join(output_dir, f"{params['expr_name']}.pkl")
     assert os.path.isfile(file_name), f"file does not exist: {file_name}"
     with open(file_name, "rb") as file:
         data = pickle.load(file)
@@ -20,9 +16,12 @@ def load_pickle(params):
     return data
 
 
-def save_pickle(params, data):
+def save_pickle(prompt_id, params, data):
     # save results from model
-    file_name = os.path.join(SAVE_DIR, f"{params['expr_name']}.pkl")
+    output_dir = f"{params['output_dir']}/{prompt_id}"
+    if not os.path.exists(output_dir):
+        Path(output_dir).mkdir(parents=True)
+    file_name = os.path.join(output_dir, f"{params['expr_name']}.pkl")
     if os.path.isfile(file_name):
         print("WARNING! overwriting existing saved files")
     with open(file_name, "wb") as file:

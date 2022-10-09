@@ -20,7 +20,7 @@ ag_news_prompts = [
 
 
 class DataHelper:
-    def __init__(self, data_dir, dataset_name, k, seed) -> None:
+    def __init__(self, data_dir, dataset_name) -> None:
         # download data to specified dir if not already exist
         self.data_path = os.path.join(data_dir, dataset_name)
         Path(data_dir).mkdir(exist_ok=True, parents=True)
@@ -58,21 +58,24 @@ class DataHelper:
         return (train_sentences, train_labels, test_sentences, test_labels)
 
     @staticmethod
-    def get_prompts():
-        return ag_news_prompts
+    def get_prompts(dataset):
+        if dataset == "agnews":
+            return ag_news_prompts
+        raise ValueError("dataset name not recognized")
 
     @staticmethod
-    def get_pertubed_set(prompt, num = 7):
+    def get_pertubed_set(prompt, num=7):
         out = set()
         while len(out) < num:
-            sss = pashuffle(prompt, perc = 10)
+            sss = pashuffle(prompt)
             if sss != prompt:
                 out.add(sss)
         return out
 
     @staticmethod
-    def get_prompt_order(train_sentences, train_labels, num = 7):
+    def get_prompt_order(train_sentences, train_labels, num=7):
         import random
+
         order_list = []
         c = list(zip(train_sentences, train_labels))
         for i in range(num):

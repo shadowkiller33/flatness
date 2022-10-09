@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 
+
 class loader_labeled(Dataset):
     # Data loader for labeled data
     def __init__(
@@ -56,7 +57,7 @@ def create_set(data, demo_num, seed, dict):
     return demon_labels, demon_inputs, test_inputs, test_labels
 
 
-def pashuffle(string, perc=10):
+def pashuffle(string):
     data = string.split()
     L = len(data)
     gap = random.randint(1, 3)
