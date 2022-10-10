@@ -8,10 +8,10 @@ import os
 
 logger = logging.getLogger(__name__)
 ag_news_prompts = [
-    "What label best describes this news article?",
-    "What is this a piece of news regarding for?",
-    " What is the category of the following news?",
-    "Which is the most relevant topic of the following news?",
+    # "What label best describes this news article?",
+    # "What is this a piece of news regarding for?",
+    # " What is the category of the following news?",
+    # "Which is the most relevant topic of the following news?",
     "Give the topic of the given text.",
     "Read the text below, provide its focused topic.",
     "Is this a piece of news regarding world, sport, business,or science?",
@@ -30,7 +30,7 @@ class DataHelper:
             )
 
     def get_in_context_prompt(
-        self, params, ins, seed=42, freeze_test_set=True, verbose=False
+        self, params, ins, seed, freeze_test_set=True, verbose=False
     ):
         (
             all_train_sentences,

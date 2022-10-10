@@ -1,6 +1,6 @@
 import argparse
 from ast import Return
-from src.utils.eval_utils import sensitivity_compute
+from src.utils.eval_utils import sensitivity_compute,cross_entropy
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
@@ -91,6 +91,8 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
 def save_results(params_list, model_name, path, filename, verbose=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
+
+
     for params in params_list:
         if verbose:
             print(
@@ -102,6 +104,8 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         # the current prompt we evaluate metrics on
         prompt_id, prompt = params["prompt_id"], params["prompt"]
         seed = params["seed"]
+
+
 
         # append demos for predictions
         (
@@ -116,6 +120,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         all_label_probs = generator.get_label_probs(
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
+        #### MI
         original_labels = np.argmax(all_label_probs, axis=1)
         normalized_probs = softmax(all_label_probs, axis=1)
         avg_prob = np.average(normalized_probs, axis=0)
@@ -125,39 +130,20 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         # update result table
         update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
 
+
+
+
+
+        #### CALCULATE PERFORMANCE
         content_free_inputs = ["N/A", "", "[MASK]"]
         output = []
-
-        perturbed = DataHelper.get_pertubed_set(
-            prompt, params["perturbed_num"]
-        )  # get perturbed data
-        prompt_orders = DataHelper.get_prompt_order(
-            train_sentences, train_labels, params["perturbed_num"]
-        )
-        for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
-            (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
-                params, perturbed_prompt, verbose=False
-            )
-            train_sentences, train_labels = order
-            raw_resp_test = generator.get_model_response(
-                params, train_sentences, train_labels, test_sentences
-            )
-            all_label_probs111 = generator.get_label_probs(
-                params, raw_resp_test, train_sentences, train_labels, test_sentences
-            )
-            labels111 = np.argmax(all_label_probs111, axis=1)
-            # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
-            output.append(labels111)
-        sensitivity = sensitivity_compute(output, original_labels)
-        update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
-
         p_cf = generator.get_p_content_free(
             params,
             train_sentences,
             train_labels,
             content_free_inputs=content_free_inputs,
         )
-        acc_original = scorer.eval_accuracy(all_label_probs, test_labels)
+        acc_original = 0#scorer.eval_accuracy(all_label_probs, test_labels)
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
@@ -170,6 +156,56 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         update_result_dict(
             result_table, prompt_id, seed, prompt, "perf", acc_calibrated
         )
+
+
+
+
+
+        #### CALCULATE SENSITIVITY
+        perturbed = DataHelper.get_pertubed_set(
+            prompt, params["perturbed_num"]
+        )  # get perturbed data
+        prompt_orders = DataHelper.get_prompt_order(
+            train_sentences, train_labels, params["perturbed_num"]
+        )
+        for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
+            # (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
+            #     params, perturbed_prompt, verbose=False
+            # )
+            train_sentences, train_labels = order
+            raw_resp_test = generator.get_model_response(
+                params, train_sentences, train_labels, test_sentences
+            )
+            all_label_probs111 = generator.get_label_probs(
+                params, raw_resp_test, train_sentences, train_labels, test_sentences
+            )
+            labels111 = np.argmax(all_label_probs111, axis=1)
+            # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
+            output.append(labels111)
+        sensitivity = sensitivity_compute(output, original_labels)*-1
+        update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
+
+
+
+
+        #### CALCULATE FLATNESS
+        losses = []
+        for i in range(params['perturbed_num']):
+            raw_resp_test_flat = generator.get_model_response(
+                params, train_sentences, train_labels, test_sentences, perturbed=True
+            )
+            all_label_probs_flat = generator.get_label_probs(
+                params, raw_resp_test_flat, train_sentences, train_labels, test_sentences
+            )
+            # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
+            loss = cross_entropy(all_label_probs_flat, original_labels)
+            losses.append(loss)
+        flatness = sum(losses) / len(losses)
+        update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness*-1)
+
+
+
+
         # save non-metric information
         # this might save too much information, disabled for now
         if False:
@@ -205,30 +241,63 @@ def save_results(params_list, model_name, path, filename, verbose=False):
     # scorer.Flatness_correlation(flatness_all, performance_all)\
     # Evaluate Correlations per seed
     for seed_id in result_table.keys():
-        sen_list, mi_list, perf_list = [], [], []
+        sen_list, mi_list, flat_list, perf_list = [], [], [], []
         for prompt_id in result_table[seed_id]:
             sen_list.append(result_table[seed_id][prompt_id]["sen"])
             mi_list.append(result_table[seed_id][prompt_id]["mi"])
+            flat_list.append(result_table[seed_id][prompt_id]["flat"])
             perf_list.append(result_table[seed_id][prompt_id]["perf"])
+
+
+        # Magnitude Normalize
+        sen_list = [float(i) / sum(sen_list) for i in sen_list]
+        mi_list = [float(i) / sum(mi_list) for i in mi_list]
+        flat_list = [float(i) / sum(flat_list) for i in flat_list]
+
+
+        # sensitivity
         sen_p, sen_s, sen_k = scorer.sen_correlation(
             sen_list, perf_list, verbose=verbose
         )
-
         result_table[seed_id]["sen_p"] = sen_p
         result_table[seed_id]["sen_s"] = sen_s
         result_table[seed_id]["sen_k"] = sen_k
-        mi_p, mi_s, mi_k = scorer.MI_correlation(mi_list, perf_list, verbose=verbose)
 
+        # MI
+        mi_p, mi_s, mi_k = scorer.MI_correlation(mi_list, perf_list, verbose=verbose)
         result_table[seed_id]["mi_p"] = mi_p
         result_table[seed_id]["mi_s"] = mi_s
         result_table[seed_id]["mi_k"] = mi_k
-        ours_p, ours_s, ours_k = scorer.ours_correlation(
-            sen_list, mi_list, perf_list, verbose=verbose
-        )
 
-        result_table[seed_id]["ours_p"] = ours_p
-        result_table[seed_id]["ours_s"] = ours_s
-        result_table[seed_id]["ours_k"] = ours_k
+
+        #Flat + MI
+        ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
+            mi_list, flat_list, perf_list, verbose=verbose
+        )
+        result_table[seed_id]["ours_MI_p"] = ours_MI_p
+        result_table[seed_id]["ours_MI_s"] = ours_MI_s
+        result_table[seed_id]["ours_MI_k"] = ours_MI_k
+
+
+
+
+        #Flat + sensitivity
+        ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
+            sen_list, flat_list,  perf_list, verbose=verbose
+        )
+        result_table[seed_id]["ours_sen_p"] = ours_sen_p
+        result_table[seed_id]["ours_sen_s"] = ours_sen_s
+        result_table[seed_id]["ours_sen_k"] = ours_sen_k
+
+
+        #MI + sensitivity
+        MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
+            flat_list, mi_list, perf_list, verbose=verbose
+        )
+        result_table[seed_id]["MI_sen_p"] = MI_sen_p
+        result_table[seed_id]["MI_sen_s"] = MI_sen_s
+        result_table[seed_id]["MI_sen_k"] = MI_sen_k
+
     save_pickle(path, filename, result_table)
     print_results(result_table)
 
