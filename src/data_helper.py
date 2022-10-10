@@ -8,14 +8,26 @@ import os
 
 logger = logging.getLogger(__name__)
 ag_news_prompts = [
-    # "What label best describes this news article?",
-    # "What is this a piece of news regarding for?",
-    # " What is the category of the following news?",
-    # "Which is the most relevant topic of the following news?",
+    "What label best describes this news article?",
+    "What is this a piece of news regarding for?",
+    "What is the category of the following news?",
+    "Which is the most relevant topic of the following news?",
     "Give the topic of the given text.",
     "Read the text below, provide its focused topic.",
     "Is this a piece of news regarding world, sport, business,or science?",
     "Which section of a newspaper would this article likely appear in?",
+    "What label would you use to characterize this news item?",
+    "What term best sums up this news report?",
+    "Which category most accurately sums up this news item?",
+    "What label would you use to characterize this news story?",
+    "Is this news related to the world, sports, business, or science?",
+    "Does this news story have anything to do with the world, sports, business, or science?",
+    "Read the paragraph below and explain its specific subject.",
+    "Please read the following material and explain its main point.",
+    "Provide your thoughts on the content below after reading it.",
+    "Describe the text's subject.",
+    "For what purpose does this news item exist?",
+    "Are there any world-related, sports, business, or science-related stories in this news?"
 ]
 
 
