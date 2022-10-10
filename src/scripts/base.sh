@@ -13,4 +13,10 @@ source activate flat
 
 proj_dir=/home/lshen30/flat
 export PYTHONPATH="/home/lshen30/flat"
-python $proj_dir/src/main.py  --model gpt2-xl  --dataset agnews  --all_shots 4  --bs 12 --num_seeds 1  --subsample_test_set 500  --mode mean  --approx  --data-dir /home/lshen30/flat/data
+python $proj_dir/src/main.py      --model gpt2-xl  --dataset agnews \
+    --perturbed_num 7 --all_shots 4 \
+    --bs 4 --num_seeds 3  --subsample_test_set 1000 \
+    --mode mean  --approx \
+    --data-dir $proj_dir/data \
+    --output-dir $proj_dir/output \
+    --verbose

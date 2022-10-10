@@ -1,11 +1,19 @@
 # this file is deprecated and not used anymore
 import numpy as np
-
+import torch
+import torch.nn as nn
 
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
+
+def cross_entropy(predictions, targets):
+    loss = nn.CrossEntropyLoss()
+    predictions = torch.from_numpy(predictions)#torch.randn(3, 5, requires_grad=True)
+    targets = torch.from_numpy(targets)
+    output = loss(predictions, targets).numpy()
+    return output
 
 
 def sensitivity_compute(output, original_label):

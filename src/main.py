@@ -1,6 +1,6 @@
 import argparse
 from ast import Return
-from src.utils.eval_utils import sensitivity_compute
+from src.utils.eval_utils import sensitivity_compute,cross_entropy
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
@@ -11,8 +11,9 @@ import numpy as np
 import torch
 from scipy.special import entr
 from scipy.special import softmax
-from random import randrange
+import random
 import sys
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,158 +26,280 @@ def main(args):
         "bs": args["bs"],
         "mode": args["mode"],
         "data_dir": args["data_dir"],
-        "seed": args["num_seeds"],
-        "perturbed_num": args['perturbed_num']
+        "perturbed_num": args["perturbed_num"],
     }
-
+    model = args["models"]
+    verbose = args["verbose"]
     # list of all experiment parameters to run
     all_params = []
-    for model in args["models"]:
-        for dataset in args["datasets"]:
-            for num_shots in args["all_shots"]:
-                p = deepcopy(default_params)
-                p["model"] = model
-                p["dataset"] = dataset
-                p["num_shots"] = num_shots
-                p[
-                    "expr_name"
-                ] = f"{p['dataset']}_{p['model']}_{p['num_shots']}shot_{repr(p['subsample_test_set'])}_subsample_seed{p['seed']}"
-                all_params.append(p)
+    for dataset in args["datasets"]:
+        for num_shots in args["all_shots"]:
+            data_helper = DataHelper(args["data_dir"], dataset)
+            for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
+                for seed in args["seeds"]:
+                    p = deepcopy(default_params)
+                    p["prompt_id"] = prompt_id
+                    p["prompt"] = prompt
+                    p["seed"] = seed
+                    p["dataset"] = dataset
+                    p["num_shots"] = num_shots
+                    all_params.append(p)
 
+    filename = (
+        f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}.pkl"
+    )
     if args["use_saved_results"]:
-        load_results(all_params)
+        load_results(args["output_dir"], filename)
     else:
-        save_results(all_params)
+        save_results(all_params, model, args["output_dir"], filename, verbose=verbose)
 
 
-def load_results(params_list):
+def load_results(path, filename):
     # load saved results from model
-    result_tree = dict()
-    for params in params_list:
-        saved_result = load_pickle(params)
-        keys = [params["dataset"], params["model"], params["num_shots"]]
-        node = result_tree  # root
-        for k in keys:
-            if not (k in node.keys()):
-                node[k] = dict()
-            node = node[k]
-        node[params["seed"]] = saved_result["accuracies"]
-    print_results(result_tree)
+    result_table = load_pickle(path, filename)
+    print_results(result_table)
 
 
-def save_results(params_list):
-    result_tree = dict()
+def compute_flatness():
+    # difference = []
+    # attention = generator.get_logits(prompt)
+    #
+    # for perturbed_sentence in perturbed:
+    #     attention_p = generator.get_logits(perturbed_sentence)
+    #     difference.append(torch.abs(attention_p - attention))
+    #
+    # flatness = scorer.flat(difference)
+    # flatness_all.append(flatness)
+    pass
+
+
+def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
+    if seed not in table:
+        prompt_info = {"id": prompt_id, "prompt": prompt, entry_name: result}
+        table[seed] = {prompt_id: prompt_info}
+    else:
+        if prompt_id not in table[seed]:
+            table[seed][prompt_id] = {
+                "id": prompt_id,
+                "prompt": prompt,
+                entry_name: result,
+            }
+        else:
+            table[seed][prompt_id][entry_name] = result
+
+
+def save_results(params_list, model_name, path, filename, verbose=False):
+    result_table = {}  # keep all sens, flatness, mi results
+    generator = Generator(model_name)
+
+
     for params in params_list:
-        generator = Generator(params["model"])
-        data_helper = DataHelper(
-            params["data_dir"], params["dataset"], params["num_shots"], params["seed"]
-        )
+        if verbose:
+            print(
+                f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
+            )
+        data_helper = DataHelper(params["data_dir"], params["dataset"])
         scorer = Scorer(params["mode"], params["bs"], generator.get_tokenizer())
 
-        performance_all = []
-        flatness_all = []
-        mutual_info_all = []
-        sensitivity_all = []
-        for prompt in DataHelper.get_prompts():
+        # the current prompt we evaluate metrics on
+        prompt_id, prompt = params["prompt_id"], params["prompt"]
+        seed = params["seed"]
 
 
-            # difference = []
-            # attention = generator.get_logits(prompt)
-            #
-            # for perturbed_sentence in perturbed:
-            #     attention_p = generator.get_logits(perturbed_sentence)
-            #     difference.append(torch.abs(attention_p - attention))
-            #
-            # flatness = scorer.flat(difference)
-            # flatness_all.append(flatness)
 
-            # append demos for predictions
-            (
-                train_sentences,
-                train_labels,
-                test_sentences,
-                test_labels,
-            ) = data_helper.get_in_context_prompt(params, prompt)
+        # append demos for predictions
+        (
+            train_sentences,
+            train_labels,
+            test_sentences,
+            test_labels,
+        ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
+        raw_resp_test = generator.get_model_response(
+            params, train_sentences, train_labels, test_sentences
+        )
+        all_label_probs = generator.get_label_probs(
+            params, raw_resp_test, train_sentences, train_labels, test_sentences
+        )
+        #### MI
+        original_labels = np.argmax(all_label_probs, axis=1)
+        normalized_probs = softmax(all_label_probs, axis=1)
+        avg_prob = np.average(normalized_probs, axis=0)
+        entropy1 = np.average(entr(normalized_probs).sum(axis=1))
+        entropy2 = entr(avg_prob).sum()
+        mutual_info = entropy2 - entropy1
+        # update result table
+        update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
+
+
+
+
+
+        #### CALCULATE PERFORMANCE
+        content_free_inputs = ["N/A", "", "[MASK]"]
+        output = []
+        p_cf = generator.get_p_content_free(
+            params,
+            train_sentences,
+            train_labels,
+            content_free_inputs=content_free_inputs,
+        )
+        acc_original = 0#scorer.eval_accuracy(all_label_probs, test_labels)
+        acc_calibrated = scorer.eval_accuracy(
+            all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
+        )
+
+        update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
+        update_result_dict(
+            result_table, prompt_id, seed, prompt, "acc_c", acc_calibrated
+        )
+        update_result_dict(result_table, prompt_id, seed, prompt, "pc_f", p_cf.tolist())
+        update_result_dict(
+            result_table, prompt_id, seed, prompt, "perf", acc_calibrated
+        )
+
+
+
+
+
+        #### CALCULATE SENSITIVITY
+        perturbed = DataHelper.get_pertubed_set(
+            prompt, params["perturbed_num"]
+        )  # get perturbed data
+        prompt_orders = DataHelper.get_prompt_order(
+            train_sentences, train_labels, params["perturbed_num"]
+        )
+        for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
+            # (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
+            #     params, perturbed_prompt, verbose=False
+            # )
+            train_sentences, train_labels = order
             raw_resp_test = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences
             )
-            all_label_probs = generator.get_label_probs(
+            all_label_probs111 = generator.get_label_probs(
                 params, raw_resp_test, train_sentences, train_labels, test_sentences
             )
-            original_labels = np.argmax(all_label_probs, axis=1)
-            normalized_probs = softmax(all_label_probs, axis=1)
-            avg_prob = np.average(normalized_probs, axis=0)
-            entropy1 = np.average(entr(normalized_probs).sum(axis=1))
-            entropy2 = entr(avg_prob).sum()
-            mutual_info = entropy2 - entropy1
-            mutual_info_all.append(mutual_info)
-            content_free_inputs = ["N/A", "", "[MASK]"]
-            output = []
+            labels111 = np.argmax(all_label_probs111, axis=1)
+            # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
+            output.append(labels111)
+        sensitivity = sensitivity_compute(output, original_labels)*-1
+        update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
 
-            perturbed = DataHelper.get_pertubed_set(prompt, params['perturbed_num'])# get perturbed data
-            prompt_orders = DataHelper.get_prompt_order(train_sentences, train_labels, params['perturbed_num'])
-            for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
-                (
-                    _,
-                    _,
-                    test_sentences,
-                    test_labels,
-                ) = data_helper.get_in_context_prompt(params, perturbed_prompt)
-                train_sentences, train_labels = order
-                raw_resp_test = generator.get_model_response(
-                    params, train_sentences, train_labels, test_sentences
-                )
-                all_label_probs111 = generator.get_label_probs(
-                    params, raw_resp_test, train_sentences, train_labels, test_sentences
-                )
-                labels111 = np.argmax(all_label_probs111, axis=1)
-                #sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
-                output.append(labels111)
-            sensitivity = sensitivity_compute(output, original_labels)
-            sensitivity_all.append(sensitivity)
-            p_cf = generator.get_p_content_free(
-                params,
+
+
+
+        #### CALCULATE FLATNESS
+        losses = []
+        for i in range(params['perturbed_num']):
+            raw_resp_test_flat = generator.get_model_response(
+                params, train_sentences, train_labels, test_sentences, perturbed=True
+            )
+            all_label_probs_flat = generator.get_label_probs(
+                params, raw_resp_test_flat, train_sentences, train_labels, test_sentences
+            )
+            # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
+            loss = cross_entropy(all_label_probs_flat, original_labels)
+            losses.append(loss)
+        flatness = sum(losses) / len(losses)
+        update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness*-1)
+
+
+
+
+        # save non-metric information
+        # this might save too much information, disabled for now
+        if False:
+            update_result_dict(
+                result_table,
+                prompt_id,
+                seed,
+                prompt,
+                "train_sentences",
                 train_sentences,
-                train_labels,
-                content_free_inputs=content_free_inputs,
             )
-            acc_original = 0#%scorer.eval_accuracy(all_label_probs, test_labels)
-            acc_calibrated = scorer.eval_accuracy(
-                all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "train_labels", train_labels
             )
-            accuracies = [acc_original, acc_calibrated]
-            print(f"Accuracies: {accuracies}")
-            print(f"p_cf      : {p_cf}")
-            performance_all.append(acc_calibrated)
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "test_sentences", test_sentences
+            )
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "test_labels", test_labels
+            )
+            update_result_dict(
+                result_table, prompt_id, seed, prompt, "raw_resp_test", raw_resp_test
+            )
+            update_result_dict(
+                result_table,
+                prompt_id,
+                seed,
+                prompt,
+                "all_label_probs",
+                all_label_probs,
+            )
 
-            keys = [params["dataset"], params["model"], params["num_shots"]]
-            node = result_tree  # root
-            for k in keys:
-                if not (k in node.keys()):
-                    node[k] = dict()
-                node = node[k]
-            node[params["seed"]] = accuracies
+    # scorer.Flatness_correlation(flatness_all, performance_all)\
+    # Evaluate Correlations per seed
+    for seed_id in result_table.keys():
+        sen_list, mi_list, flat_list, perf_list = [], [], [], []
+        for prompt_id in result_table[seed_id]:
+            sen_list.append(result_table[seed_id][prompt_id]["sen"])
+            mi_list.append(result_table[seed_id][prompt_id]["mi"])
+            flat_list.append(result_table[seed_id][prompt_id]["flat"])
+            perf_list.append(result_table[seed_id][prompt_id]["perf"])
 
-            # save to file
-            result_to_save = dict()
-            params_to_save = deepcopy(params)
-            result_to_save["params"] = params_to_save
-            result_to_save["train_sentences"] = train_sentences
-            result_to_save["train_labels"] = train_labels
-            result_to_save["test_sentences"] = test_sentences
-            result_to_save["test_labels"] = test_labels
-            result_to_save["raw_resp_test"] = raw_resp_test
-            result_to_save["all_label_probs"] = all_label_probs
-            result_to_save["p_cf"] = p_cf
-            result_to_save["accuracies"] = accuracies
-            if "prompt_func" in result_to_save["params"].keys():
-                params_to_save["prompt_func"] = None
-            save_pickle(params, result_to_save)
-        #scorer.Flatness_correlation(flatness_all, performance_all)
-        scorer.sen_correlation(sensitivity_all, performance_all)
-        scorer.MI_correlation(mutual_info_all, performance_all)
-        scorer.ours_correlation(sensitivity_all,mutual_info_all, performance_all)
-        print_results(result_tree)
+
+        # Magnitude Normalize
+        sen_list = [float(i) / sum(sen_list) for i in sen_list]
+        mi_list = [float(i) / sum(mi_list) for i in mi_list]
+        flat_list = [float(i) / sum(flat_list) for i in flat_list]
+
+
+        # sensitivity
+        sen_p, sen_s, sen_k = scorer.sen_correlation(
+            sen_list, perf_list, verbose=verbose
+        )
+        result_table[seed_id]["sen_p"] = sen_p
+        result_table[seed_id]["sen_s"] = sen_s
+        result_table[seed_id]["sen_k"] = sen_k
+
+        # MI
+        mi_p, mi_s, mi_k = scorer.MI_correlation(mi_list, perf_list, verbose=verbose)
+        result_table[seed_id]["mi_p"] = mi_p
+        result_table[seed_id]["mi_s"] = mi_s
+        result_table[seed_id]["mi_k"] = mi_k
+
+
+        #Flat + MI
+        ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
+            mi_list, flat_list, perf_list, verbose=verbose
+        )
+        result_table[seed_id]["ours_MI_p"] = ours_MI_p
+        result_table[seed_id]["ours_MI_s"] = ours_MI_s
+        result_table[seed_id]["ours_MI_k"] = ours_MI_k
+
+
+
+
+        #Flat + sensitivity
+        ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
+            sen_list, flat_list,  perf_list, verbose=verbose
+        )
+        result_table[seed_id]["ours_sen_p"] = ours_sen_p
+        result_table[seed_id]["ours_sen_s"] = ours_sen_s
+        result_table[seed_id]["ours_sen_k"] = ours_sen_k
+
+
+        #MI + sensitivity
+        MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
+            flat_list, mi_list, perf_list, verbose=verbose
+        )
+        result_table[seed_id]["MI_sen_p"] = MI_sen_p
+        result_table[seed_id]["MI_sen_s"] = MI_sen_s
+        result_table[seed_id]["MI_sen_k"] = MI_sen_k
+
+    save_pickle(path, filename, result_table)
+    print_results(result_table)
 
 
 if __name__ == "__main__":
@@ -195,6 +318,12 @@ if __name__ == "__main__":
         action="store",
         required=True,
         help="name of dataset(s), e.g., agnews",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Directory to save results",
     )
     parser.add_argument(
         "--num_seeds",
@@ -265,6 +394,10 @@ if __name__ == "__main__":
         help="whether to load the results from pickle files and not run the model",
     )
     parser.add_argument(
+        "--verbose",
+        action="store_true",
+    )
+    parser.add_argument(
         "--approx",
         dest="approx",
         action="store_const",
@@ -284,7 +417,11 @@ if __name__ == "__main__":
         else:
             return [s.strip() for s in items.split(",")]
 
-    args["models"] = convert_to_list(args["models"])
+    args["models"] = convert_to_list(args["models"])[0]
     args["datasets"] = convert_to_list(args["datasets"])
     args["all_shots"] = convert_to_list(args["all_shots"], is_int=True)
+    seeds = []
+    while len(set(seeds)) < int(args["num_seeds"]):
+        seeds.append(random.randint(1, 100))
+    args["seeds"] = seeds
     main(args)
