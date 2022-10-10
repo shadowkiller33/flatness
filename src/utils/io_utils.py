@@ -1,6 +1,4 @@
-from curses.ascii import isalpha, isdigit
 import os
-from copy import deepcopy
 from pathlib import Path
 import pickle
 import numpy as np
@@ -34,7 +32,9 @@ def print_results(table):
     # calculate correlations across seeds
     sen_p_list, sen_s_list, sen_k_list = [], [], []
     mi_p_list, mi_s_list, mi_k_list = [], [], []
-    ours_p_list, ours_s_list, ours_k_list = [], [], []
+    ours_MI_p_list, ours_MI_s_list, ours_MI_k_list = [], [], []
+    ours_sen_p_list, ours_sen_s_list, ours_sen_k_list = [], [], []
+    MI_sen_p_list, MI_sen_s_list, MI_sen_k_list = [], [], []
 
     for seed_id in table.keys():
         seed_level_info = table[seed_id]
@@ -44,9 +44,17 @@ def print_results(table):
         mi_p_list.append(seed_level_info["mi_p"])
         mi_s_list.append(seed_level_info["mi_s"])
         mi_k_list.append(seed_level_info["mi_k"])
-        ours_p_list.append(seed_level_info["ours_p"])
-        ours_s_list.append(seed_level_info["ours_s"])
-        ours_k_list.append(seed_level_info["ours_k"])
+        ours_MI_p_list.append(seed_level_info["ours_MI_p"])
+        ours_MI_s_list.append(seed_level_info["ours_MI_s"])
+        ours_MI_k_list.append(seed_level_info["ours_MI_k"])
+        ours_sen_p_list.append(seed_level_info["ours_sen_p"])
+        ours_sen_s_list.append(seed_level_info["ours_sen_s"])
+        ours_sen_k_list.append(seed_level_info["ours_sen_k"])
+        MI_sen_p_list.append(seed_level_info["MI_sen_p"])
+        MI_sen_s_list.append(seed_level_info["MI_sen_s"])
+        MI_sen_k_list.append(seed_level_info["MI_sen_k"])
+
+
     sen_p_avg, sen_p_var = np.average(np.array(sen_p_list)), np.var(
         np.array(sen_p_list)
     )
@@ -59,15 +67,38 @@ def print_results(table):
     mi_p_avg, mi_p_var = np.average(np.array(mi_p_list)), np.var(np.array(mi_p_list))
     mi_s_avg, mi_s_var = np.average(np.array(mi_s_list)), np.var(np.array(mi_s_list))
     mi_k_avg, mi_k_var = np.average(np.array(mi_k_list)), np.var(np.array(mi_k_list))
-    ours_p_avg, ours_p_var = np.average(np.array(ours_p_list)), np.var(
-        np.array(ours_p_list)
+    ours_MI_p_avg, ours_MI_p_var = np.average(np.array(ours_MI_p_list)), np.var(
+        np.array(ours_MI_p_list)
     )
-    ours_s_avg, ours_s_var = np.average(np.array(ours_s_list)), np.var(
-        np.array(ours_s_list)
+    ours_MI_s_avg, ours_MI_s_var = np.average(np.array(ours_MI_s_list)), np.var(
+        np.array(ours_MI_s_list)
     )
-    ours_k_avg, ours_k_var = np.average(np.array(ours_k_list)), np.var(
-        np.array(ours_k_list)
+    ours_MI_k_avg, ours_MI_k_var = np.average(np.array(ours_MI_k_list)), np.var(
+        np.array(ours_MI_k_list)
     )
+
+
+    MI_sen_p_avg, MI_sen_p_var = np.average(np.array(MI_sen_p_list)), np.var(
+        np.array(MI_sen_p_list)
+    )
+    MI_sen_s_avg, MI_sen_s_var = np.average(np.array(MI_sen_s_list)), np.var(
+        np.array(MI_sen_s_list)
+    )
+    MI_sen_k_avg, MI_sen_k_var = np.average(np.array(MI_sen_k_list)), np.var(
+        np.array(MI_sen_k_list)
+    )
+
+
+    ours_sen_p_avg, ours_sen_p_var = np.average(np.array(ours_sen_p_list)), np.var(
+        np.array(ours_sen_p_list)
+    )
+    ours_sen_s_avg, ours_sen_s_var = np.average(np.array(ours_sen_s_list)), np.var(
+        np.array(ours_sen_s_list)
+    )
+    ours_sen_k_avg, ours_sen_k_var = np.average(np.array(ours_sen_k_list)), np.var(
+        np.array(ours_sen_k_list)
+    )
+
     print("Avg/Var of sensitivity's correlation to performance:")
     print(f"Pearson Correlation: {sen_p_avg:.4}/{sen_p_var:.4}")
     print(f"Spearman Correlation: {sen_s_avg:.4}/{sen_s_var:.4}")
@@ -78,10 +109,22 @@ def print_results(table):
     print(f"Spearman Correlation: {mi_s_avg:.4}/{mi_s_var:.4}")
     print(f"Kendalltau Correlation: {mi_k_avg:.4}/{mi_k_var:.4}")
     print()
-    print("Avg/Var of our's correlation to performance:")
-    print(f"Pearson Correlation: {ours_p_avg:.4}/{ours_p_var:.4}")
-    print(f"Spearman Correlation: {ours_s_avg:.4}/{ours_s_var:.4}")
-    print(f"Kendalltau Correlation: {ours_k_avg:.4}/{ours_k_var:.4}")
+    print("Avg/Var of (flatness + MI) correlation to performance:")
+    print(f"Pearson Correlation: {ours_MI_p_avg:.4}/{ours_MI_p_var:.4}")
+    print(f"Spearman Correlation: {ours_MI_s_avg:.4}/{ours_MI_s_var:.4}")
+    print(f"Kendalltau Correlation: {ours_MI_k_avg:.4}/{ours_MI_k_var:.4}")
+    print()
+
+    print("Avg/Var of (flatness + sen) correlation to performance:")
+    print(f"Pearson Correlation: {ours_sen_p_avg:.4}/{ours_sen_p_var:.4}")
+    print(f"Spearman Correlation: {ours_sen_s_avg:.4}/{ours_sen_s_var:.4}")
+    print(f"Kendalltau Correlation: {ours_sen_k_avg:.4}/{ours_sen_k_var:.4}")
+    print()
+
+    print("Avg/Var of (sen + MI) correlation to performance:")
+    print(f"Pearson Correlation: {MI_sen_p_avg:.4}/{MI_sen_p_var:.4}")
+    print(f"Spearman Correlation: {MI_sen_s_avg:.4}/{MI_sen_s_var:.4}")
+    print(f"Kendalltau Correlation: {MI_sen_k_avg:.4}/{MI_sen_k_var:.4}")
     print()
 
     # calculate accuracy across seeds
