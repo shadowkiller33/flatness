@@ -96,35 +96,35 @@ def print_results(table):
         np.array(ours_sen_k_list)
     )
 
-    print("Avg/Var of sensitivity's correlation to performance:", flush=True)
-    print(f"Pearson Correlation: {sen_p_avg:.4}/{sen_p_var:.4}", flush=True)
-    print(f"Spearman Correlation: {sen_s_avg:.4}/{sen_s_var:.4}", flush=True)
-    print(f"Kendalltau Correlation: {sen_k_avg:.4}/{sen_k_var:.4}", flush=True)
-    print("", flush=True)
-    print("Avg/Var of mutual information's correlation to performance:", flush=True)
-    print(f"Pearson Correlation: {mi_p_avg:.4}/{mi_p_var:.4}", flush=True)
-    print(f"Spearman Correlation: {mi_s_avg:.4}/{mi_s_var:.4}", flush=True)
-    print(f"Kendalltau Correlation: {mi_k_avg:.4}/{mi_k_var:.4}", flush=True)
-    print("", flush=True)
-    print("Avg/Var of (flatness + MI) correlation to performance:", flush=True)
-    print(f"Pearson Correlation: {ours_MI_p_avg:.4}/{ours_MI_p_var:.4}", flush=True)
-    print(f"Spearman Correlation: {ours_MI_s_avg:.4}/{ours_MI_s_var:.4}", flush=True)
-    print(f"Kendalltau Correlation: {ours_MI_k_avg:.4}/{ours_MI_k_var:.4}", flush=True)
-    print("", flush=True)
+    print("Avg/Var of sensitivity's correlation to performance:")
+    print(f"Pearson Correlation: {sen_p_avg:.4}/{sen_p_var:.4}")
+    print(f"Spearman Correlation: {sen_s_avg:.4}/{sen_s_var:.4}")
+    print(f"Kendalltau Correlation: {sen_k_avg:.4}/{sen_k_var:.4}")
+    print("")
+    print("Avg/Var of mutual information's correlation to performance:")
+    print(f"Pearson Correlation: {mi_p_avg:.4}/{mi_p_var:.4}")
+    print(f"Spearman Correlation: {mi_s_avg:.4}/{mi_s_var:.4}")
+    print(f"Kendalltau Correlation: {mi_k_avg:.4}/{mi_k_var:.4}")
+    print("")
+    print("Avg/Var of (flatness + MI) correlation to performance:")
+    print(f"Pearson Correlation: {ours_MI_p_avg:.4}/{ours_MI_p_var:.4}")
+    print(f"Spearman Correlation: {ours_MI_s_avg:.4}/{ours_MI_s_var:.4}")
+    print(f"Kendalltau Correlation: {ours_MI_k_avg:.4}/{ours_MI_k_var:.4}")
+    print("")
 
-    print("Avg/Var of (flatness + sen) correlation to performance:", flush=True)
-    print(f"Pearson Correlation: {ours_sen_p_avg:.4}/{ours_sen_p_var:.4}", flush=True)
-    print(f"Spearman Correlation: {ours_sen_s_avg:.4}/{ours_sen_s_var:.4}", flush=True)
+    print("Avg/Var of (flatness + sen) correlation to performance:")
+    print(f"Pearson Correlation: {ours_sen_p_avg:.4}/{ours_sen_p_var:.4}")
+    print(f"Spearman Correlation: {ours_sen_s_avg:.4}/{ours_sen_s_var:.4}")
     print(
-        f"Kendalltau Correlation: {ours_sen_k_avg:.4}/{ours_sen_k_var:.4}", flush=True
+        f"Kendalltau Correlation: {ours_sen_k_avg:.4}/{ours_sen_k_var:.4}"
     )
-    print("", flush=True)
+    print("")
 
-    print("Avg/Var of (sen + MI) correlation to performance:", flush=True)
-    print(f"Pearson Correlation: {MI_sen_p_avg:.4}/{MI_sen_p_var:.4}", flush=True)
-    print(f"Spearman Correlation: {MI_sen_s_avg:.4}/{MI_sen_s_var:.4}", flush=True)
-    print(f"Kendalltau Correlation: {MI_sen_k_avg:.4}/{MI_sen_k_var:.4}", flush=True)
-    print("", flush=True)
+    print("Avg/Var of (sen + MI) correlation to performance:")
+    print(f"Pearson Correlation: {MI_sen_p_avg:.4}/{MI_sen_p_var:.4}")
+    print(f"Spearman Correlation: {MI_sen_s_avg:.4}/{MI_sen_s_var:.4}")
+    print(f"Kendalltau Correlation: {MI_sen_k_avg:.4}/{MI_sen_k_var:.4}")
+    print("")
 
     # calculate accuracy across seeds
     acc_result = {}
@@ -156,8 +156,7 @@ def print_results(table):
             np.array(calibrated_acc)
         )
 
-        print(f"Average/Variance of accuracy for Prompt: {prompt}", flush=True)
+        print(f"Average/Variance of accuracy for Prompt: {prompt}")
         print(
-            f"Origin: {avg_acc:.4}/{var_acc:.4}\tCalibrated: {avg_acc_c:.4}/{var_acc_c:.4}",
-            flush=True,
+            f"Origin: {avg_acc:.4}/{var_acc:.4}\tCalibrated: {avg_acc_c:.4}/{var_acc_c:.4}"
         )

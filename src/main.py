@@ -1,18 +1,16 @@
 import argparse
-from ast import Return
 from src.utils.eval_utils import sensitivity_compute, cross_entropy
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
-from src.utils.io_utils import print_results, load_pickle, save_pickle
+from src.utils.io_utils import save_pickle
 from copy import deepcopy
 import logging
 import numpy as np
-import torch
-from scipy.special import entr
+import scipy
 from scipy.special import softmax
 import random
-import sys
+import submitit
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,6 @@ def main(args):
         "api_num_log_prob": args["api_num_log_prob"],
         "approx": args["approx"],
         "bs": args["bs"],
-        "mode": args["mode"],
         "data_dir": args["data_dir"],
         "perturbed_num": args["perturbed_num"],
     }
@@ -45,32 +42,40 @@ def main(args):
                     p["num_shots"] = num_shots
                     all_params.append(p)
 
-    filename = (
-        f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}.pkl"
+    filename = f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}"
+
+    executor = submitit.AutoExecutor(folder=f"{args['output_dir']}/slurm")
+    # set timeout in min, and partition for running the job
+    executor.update_parameters(
+        name=filename,
+        tasks_per_node=1,
+        gpus_per_node=1,
+        nodes=1,
+        mem_gb=8,
+        cpus_per_task=4,
+        timeout_min=300,
+        slurm_partition="v100",
+        slurm_account="danielk_gpu",
     )
-    if args["use_saved_results"]:
-        load_results(args["output_dir"], filename)
-    else:
-        save_results(all_params, model, args["output_dir"], filename, verbose=verbose)
+    print(f"Submit {len(all_params)} jobs at the same time")
+    for i in range(4):
+        # need to wrap jobs for submitit
+        job_args = {
+            "filename": filename,
+            "output_dir": args["output_dir"],
+            "verbose": verbose,
+            "model": model,
+        }
+        executor.submit(job_wrapper, job_args)
 
 
-def load_results(path, filename):
-    # load saved results from model
-    result_table = load_pickle(path, filename)
-    print_results(result_table)
-
-
-def compute_flatness():
-    # difference = []
-    # attention = generator.get_logits(prompt)
-    #
-    # for perturbed_sentence in perturbed:
-    #     attention_p = generator.get_logits(perturbed_sentence)
-    #     difference.append(torch.abs(attention_p - attention))
-    #
-    # flatness = scorer.flat(difference)
-    # flatness_all.append(flatness)
-    pass
+def job_wrapper(input_args):
+    params_list = input_args["params"]
+    filename = input_args["filename"]
+    output_dir = input_args["output_dir"]
+    verbose = input_args["verbose"]
+    model = input_args["model"]
+    save_results([params_list], model, output_dir, filename, verbose)
 
 
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
@@ -95,11 +100,10 @@ def save_results(params_list, model_name, path, filename, verbose=False):
     for params in params_list:
         if verbose:
             print(
-                f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}",
-                flush=True,
+                f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
             )
         data_helper = DataHelper(params["data_dir"], params["dataset"])
-        scorer = Scorer(params["mode"], params["bs"], generator.get_tokenizer())
+        scorer = Scorer(params["bs"], generator.get_tokenizer())
 
         # the current prompt we evaluate metrics on
         prompt_id, prompt = params["prompt_id"], params["prompt"]
@@ -122,9 +126,11 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         original_labels = np.argmax(all_label_probs, axis=1)
         normalized_probs = softmax(all_label_probs, axis=1)
         avg_prob = np.average(normalized_probs, axis=0)
-        entropy1 = np.average(entr(normalized_probs).sum(axis=1))
-        entropy2 = entr(avg_prob).sum()
+
+        entropy1 = np.average(scipy.special.entr(normalized_probs).sum(axis=1))
+        entropy2 = scipy.special.entr(avg_prob).sum()
         mutual_info = entropy2 - entropy1
+
         # update result table
         update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
 
@@ -226,61 +232,9 @@ def save_results(params_list, model_name, path, filename, verbose=False):
                 all_label_probs,
             )
 
-    # scorer.Flatness_correlation(flatness_all, performance_all)\
-    # Evaluate Correlations per seed
-    for seed_id in result_table.keys():
-        sen_list, mi_list, flat_list, perf_list = [], [], [], []
-        for prompt_id in result_table[seed_id]:
-            sen_list.append(result_table[seed_id][prompt_id]["sen"])
-            mi_list.append(result_table[seed_id][prompt_id]["mi"])
-            flat_list.append(result_table[seed_id][prompt_id]["flat"])
-            perf_list.append(result_table[seed_id][prompt_id]["perf"])
-
-        # Magnitude Normalize
-        sen_list = [float(i) / sum(sen_list) for i in sen_list]
-        mi_list = [float(i) / sum(mi_list) for i in mi_list]
-        flat_list = [float(i) / sum(flat_list) for i in flat_list]
-
-        # sensitivity
-        sen_p, sen_s, sen_k = scorer.sen_correlation(
-            sen_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["sen_p"] = sen_p
-        result_table[seed_id]["sen_s"] = sen_s
-        result_table[seed_id]["sen_k"] = sen_k
-
-        # MI
-        mi_p, mi_s, mi_k = scorer.MI_correlation(mi_list, perf_list, verbose=verbose)
-        result_table[seed_id]["mi_p"] = mi_p
-        result_table[seed_id]["mi_s"] = mi_s
-        result_table[seed_id]["mi_k"] = mi_k
-
-        # Flat + MI
-        ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
-            mi_list, flat_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["ours_MI_p"] = ours_MI_p
-        result_table[seed_id]["ours_MI_s"] = ours_MI_s
-        result_table[seed_id]["ours_MI_k"] = ours_MI_k
-
-        # Flat + sensitivity
-        ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
-            sen_list, flat_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["ours_sen_p"] = ours_sen_p
-        result_table[seed_id]["ours_sen_s"] = ours_sen_s
-        result_table[seed_id]["ours_sen_k"] = ours_sen_k
-
-        # MI + sensitivity
-        MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
-            flat_list, mi_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["MI_sen_p"] = MI_sen_p
-        result_table[seed_id]["MI_sen_s"] = MI_sen_s
-        result_table[seed_id]["MI_sen_k"] = MI_sen_k
-
-    save_pickle(path, filename, result_table)
-    print_results(result_table)
+        save_file = f"{filename}_prompt{prompt_id}_seed{seed}.pkl"
+        save_pickle(path, save_file, result_table)
+        print(f"Done inference for prompt {prompt_id}, seed {seed}")
 
 
 if __name__ == "__main__":
@@ -328,14 +282,6 @@ if __name__ == "__main__":
         action="store",
         required=True,
         help="num training examples to use",
-    )
-    parser.add_argument(
-        "--mode",
-        dest="mode",
-        action="store",
-        required=True,
-        default="max",
-        help="the way to calculate flatness",
     )
     # other arguments
     parser.add_argument(
@@ -405,4 +351,57 @@ if __name__ == "__main__":
     while len(set(seeds)) < int(args["num_seeds"]):
         seeds.append(random.randint(1, 100))
     args["seeds"] = seeds
-    main(args)
+
+    default_params = {
+        "conditioned_on_correct_classes": True,
+        "subsample_test_set": args["subsample_test_set"],
+        "api_num_log_prob": args["api_num_log_prob"],
+        "approx": args["approx"],
+        "bs": args["bs"],
+        "data_dir": args["data_dir"],
+        "perturbed_num": args["perturbed_num"],
+    }
+    model = args["models"]
+    verbose = args["verbose"]
+    # list of all experiment parameters to run
+    all_params = []
+    for dataset in args["datasets"]:
+        for num_shots in args["all_shots"]:
+            data_helper = DataHelper(args["data_dir"], dataset)
+            for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
+                for seed in args["seeds"]:
+                    p = deepcopy(default_params)
+                    p["prompt_id"] = prompt_id
+                    p["prompt"] = prompt
+                    p["seed"] = seed
+                    p["dataset"] = dataset
+                    p["num_shots"] = num_shots
+                    all_params.append(p)
+
+    filename = f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}"
+
+    executor = submitit.AutoExecutor(folder=f"{args['output_dir']}/slurm")
+    # set timeout in min, and partition for running the job
+    executor.update_parameters(
+        name=filename,
+        tasks_per_node=1,
+        gpus_per_node=1,
+        nodes=1,
+        mem_gb=32,
+        cpus_per_task=4,
+        timeout_min=300,
+        slurm_partition="a100",
+        slurm_account="danielk_gpu",
+    )
+    print(f"Submit {len(all_params)} jobs at the same time")
+    for i in range(len(all_params)):
+        # for i in range(1):
+        # need to wrap jobs for submitit
+        job_args = {
+            "params": all_params[i],
+            "filename": filename,
+            "output_dir": args["output_dir"],
+            "verbose": verbose,
+            "model": model,
+        }
+        executor.submit(job_wrapper, job_args)

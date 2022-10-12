@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Scorer:
-    def __init__(self, mode, batch_size, tokenizer) -> None:
-        self.mode = mode
+    def __init__(self, batch_size, tokenizer) -> None:
         self.batch_size = batch_size
         self.tokenizer = tokenizer
 
@@ -28,22 +27,6 @@ class Scorer:
         )
         acc_total = generator.validate(test_loader)
         return acc_total
-
-    def Flatness_correlation(self, flatness, performance, verbose=False):
-        a = pearsonr(flatness, performance)[0]
-        b = spearmanr(flatness, performance)[0]
-        c = kendalltau(flatness, performance)[0]
-        if verbose:
-            print(
-                f"The pearson correlation between {self.mode} flatness and acc is {a}"
-            )
-            print(
-                f"The spearman correlation between {self.mode} flatness and acc is {b}"
-            )
-            print(
-                f"The kendall correlation between {self.mode} flatness and acc is {c}"
-            )
-        return (a, b, c)
 
     def sen_correlation(self, sen, performance, verbose=False):
         a = pearsonr(sen, performance)[0]
@@ -75,7 +58,9 @@ class Scorer:
         index = A.index(max(A))
         if verbose:
             print(f"The best alpha (weighted factor) is {index}")
-            print(f"The pearson correlation between ours (flatness + MI) and acc is {A[index]}")
+            print(
+                f"The pearson correlation between ours (flatness + MI) and acc is {A[index]}"
+            )
             print(
                 f"The spearman correlation between ours (flatness + MI) and acc is {B[index]}"
             )
@@ -94,7 +79,9 @@ class Scorer:
         index = A.index(max(A))
         if verbose:
             print(f"The best alpha (weighted factor) is {index}")
-            print(f"The pearson correlation between ours (flatness + sen) and acc is {A[index]}")
+            print(
+                f"The pearson correlation between ours (flatness + sen) and acc is {A[index]}"
+            )
             print(
                 f"The spearman correlation between ours (flatness + sen) and acc is {B[index]}"
             )
@@ -114,32 +101,9 @@ class Scorer:
         if verbose:
             print(f"The best alpha (weighted factor) is {index}")
             print(f"The pearson correlation between (MI + sen) and acc is {A[index]}")
-            print(
-                f"The spearman correlation between (MI + sen) and acc is {B[index]}"
-            )
-            print(
-                f"The kendall correlation between (MI + sen) and acc is {C[index]}"
-            )
+            print(f"The spearman correlation between (MI + sen) and acc is {B[index]}")
+            print(f"The kendall correlation between (MI + sen) and acc is {C[index]}")
         return (A[index], B[index], C[index])
-
-
-
-
-    def flat(self, input):
-        if self.mode == "mean":
-            avg_tensor = torch.mean(torch.stack(input))
-            # normalization = reduce(lambda x, y: x*y, list(avg_tensor.size()))
-            # mean = torch.sum(avg_tensor)/normalization
-            return avg_tensor.detach().cpu().item()
-
-        elif self.mode == "max":
-            max_tensor = torch.max(torch.stack(input))
-            return max_tensor.detach().cpu().item()
-
-        elif self.mode == "avg_max":
-            avg_tensor = torch.mean(torch.stack(input))
-            max_tensor = torch.max(avg_tensor)
-            return max_tensor.detach().cpu().item()
 
     def eval_accuracy(self, all_label_probs, test_labels, mode=None, p_cf=None):
         # evaluate the accuracy with and without contextual calibration

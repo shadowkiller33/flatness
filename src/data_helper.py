@@ -57,7 +57,6 @@ class DataHelper:
             if verbose:
                 print(
                     f"selecting full test set ({len(all_test_labels)} examples)",
-                    flush=True,
                 )
         else:
             if freeze_test_set:
