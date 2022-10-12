@@ -15,60 +15,6 @@ import submitit
 logger = logging.getLogger(__name__)
 
 
-def main(args):
-    default_params = {
-        "conditioned_on_correct_classes": True,
-        "subsample_test_set": args["subsample_test_set"],
-        "api_num_log_prob": args["api_num_log_prob"],
-        "approx": args["approx"],
-        "bs": args["bs"],
-        "data_dir": args["data_dir"],
-        "perturbed_num": args["perturbed_num"],
-    }
-    model = args["models"]
-    verbose = args["verbose"]
-    # list of all experiment parameters to run
-    all_params = []
-    for dataset in args["datasets"]:
-        for num_shots in args["all_shots"]:
-            data_helper = DataHelper(args["data_dir"], dataset)
-            for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
-                for seed in args["seeds"]:
-                    p = deepcopy(default_params)
-                    p["prompt_id"] = prompt_id
-                    p["prompt"] = prompt
-                    p["seed"] = seed
-                    p["dataset"] = dataset
-                    p["num_shots"] = num_shots
-                    all_params.append(p)
-
-    filename = f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}"
-
-    executor = submitit.AutoExecutor(folder=f"{args['output_dir']}/slurm")
-    # set timeout in min, and partition for running the job
-    executor.update_parameters(
-        name=filename,
-        tasks_per_node=1,
-        gpus_per_node=1,
-        nodes=1,
-        mem_gb=8,
-        cpus_per_task=4,
-        timeout_min=300,
-        slurm_partition="v100",
-        slurm_account="danielk_gpu",
-    )
-    print(f"Submit {len(all_params)} jobs at the same time")
-    for i in range(4):
-        # need to wrap jobs for submitit
-        job_args = {
-            "filename": filename,
-            "output_dir": args["output_dir"],
-            "verbose": verbose,
-            "model": model,
-        }
-        executor.submit(job_wrapper, job_args)
-
-
 def job_wrapper(input_args):
     params_list = input_args["params"]
     filename = input_args["filename"]
