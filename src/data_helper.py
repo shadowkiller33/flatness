@@ -25,7 +25,7 @@ ag_news_prompts = [
     "Read the paragraph below and explain its specific subject.",
     "Please read the following material and explain its main point.",
     "Provide your thoughts on the content below after reading it.",
-    "Describe the text's subject.",
+    "Describe the text's subject as follows.",
     "For what purpose does this news item exist?",
     "Are there any world-related, sports, business, or science-related stories in this news?"
 ]
@@ -42,7 +42,7 @@ class DataHelper:
             )
 
     def get_in_context_prompt(
-        self, params, ins, seed, freeze_test_set=True, verbose=False
+        self, params, ins, seed, freeze_test_set=True, all=False, verbose=False
     ):
         (
             all_train_sentences,
@@ -51,7 +51,7 @@ class DataHelper:
             all_test_labels,
         ) = load_dataset(self.data_path, params, ins + "\n\n")
         # retrieve test set
-        if params["subsample_test_set"] is None:
+        if params["subsample_test_set"] is None or all == True:
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
             if verbose:

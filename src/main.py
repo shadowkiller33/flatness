@@ -60,17 +60,7 @@ def load_results(path, filename):
     print_results(result_table)
 
 
-def compute_flatness():
-    # difference = []
-    # attention = generator.get_logits(prompt)
-    #
-    # for perturbed_sentence in perturbed:
-    #     attention_p = generator.get_logits(perturbed_sentence)
-    #     difference.append(torch.abs(attention_p - attention))
-    #
-    # flatness = scorer.flat(difference)
-    # flatness_all.append(flatness)
-    pass
+
 
 
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
@@ -105,9 +95,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         prompt_id, prompt = params["prompt_id"], params["prompt"]
         seed = params["seed"]
 
-
-
-        # append demos for predictions
         (
             train_sentences,
             train_labels,
@@ -120,19 +107,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         all_label_probs = generator.get_label_probs(
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
-        #### MI
-        original_labels = np.argmax(all_label_probs, axis=1)
-        normalized_probs = softmax(all_label_probs, axis=1)
-        avg_prob = np.average(normalized_probs, axis=0)
-        entropy1 = np.average(entr(normalized_probs).sum(axis=1))
-        entropy2 = entr(avg_prob).sum()
-        mutual_info = entropy2 - entropy1
-        # update result table
-        update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
-
-
-
-
 
         #### CALCULATE PERFORMANCE
         content_free_inputs = ["N/A", "", "[MASK]"]
@@ -156,6 +130,42 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         update_result_dict(
             result_table, prompt_id, seed, prompt, "perf", acc_calibrated
         )
+        #### MI
+        original_labels = np.argmax(all_label_probs, axis=1)
+        normalized_probs = softmax(all_label_probs, axis=1)
+        avg_prob = np.average(normalized_probs, axis=0)
+        entropy1 = np.average(entr(normalized_probs).sum(axis=1))
+        entropy2 = entr(avg_prob).sum()
+        mutual_info = entropy2 - entropy1
+        # update result table
+        update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
+
+
+
+
+
+
+
+        # append demos for predictions
+        # (
+        #     train_sentences,
+        #     train_labels,
+        #     test_sentences,
+        #     test_labels,
+        # ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
+        # raw_resp_test = generator.get_model_response(
+        #     params, train_sentences, train_labels, test_sentences
+        # )
+        # all_label_probs = generator.get_label_probs(
+        #     params, raw_resp_test, train_sentences, train_labels, test_sentences
+        # )
+
+
+
+
+
+
+
 
 
 
@@ -182,7 +192,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             labels111 = np.argmax(all_label_probs111, axis=1)
             # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
             output.append(labels111)
-        sensitivity = sensitivity_compute(output, original_labels)*-1
+        sensitivity = sensitivity_compute(output, original_labels)
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
 
 
