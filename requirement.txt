@@ -1,12 +1,14 @@
-huggingface-hub         0.9.1
-scikit-learn            0.24.2
-scipy                   1.5.4
-shortuuid               1.0.1
-tokenizer               3.4.1
-tokenizers              0.12.1
-torch                   1.8.1+cu111
-torchaudio              0.8.1
-torchmetrics            0.6.2
-torchvision             0.9.1+cu111
-tqdm                    4.64.0
-transformers            4.17.0
+huggingface-hub==0.9.1
+scikit-learn==0.24.2
+scipy==1.5.4
+shortuuid==1.0.1
+tokenizer==3.4.1
+tokenizers==0.12.1
+torch==1.8.1
+torchaudio==0.8.1
+torchmetrics==0.6.2
+torchvision==0.9.1
+tqdm==4.64.0
+transformers==4.17.0
+pandas
+datasets
