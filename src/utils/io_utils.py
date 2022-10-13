@@ -32,6 +32,7 @@ def print_results(table):
     # calculate correlations across seeds
     sen_p_list, sen_s_list, sen_k_list = [], [], []
     mi_p_list, mi_s_list, mi_k_list = [], [], []
+    f_p_list, f_s_list, f_k_list = [], [], []
     ours_MI_p_list, ours_MI_s_list, ours_MI_k_list = [], [], []
     ours_sen_p_list, ours_sen_s_list, ours_sen_k_list = [], [], []
     MI_sen_p_list, MI_sen_s_list, MI_sen_k_list = [], [], []
@@ -41,15 +42,21 @@ def print_results(table):
         sen_p_list.append(seed_level_info["sen_p"])
         sen_s_list.append(seed_level_info["sen_s"])
         sen_k_list.append(seed_level_info["sen_k"])
+
         mi_p_list.append(seed_level_info["mi_p"])
         mi_s_list.append(seed_level_info["mi_s"])
         mi_k_list.append(seed_level_info["mi_k"])
+
+
+
         ours_MI_p_list.append(seed_level_info["ours_MI_p"])
         ours_MI_s_list.append(seed_level_info["ours_MI_s"])
         ours_MI_k_list.append(seed_level_info["ours_MI_k"])
+
         ours_sen_p_list.append(seed_level_info["ours_sen_p"])
         ours_sen_s_list.append(seed_level_info["ours_sen_s"])
         ours_sen_k_list.append(seed_level_info["ours_sen_k"])
+
         MI_sen_p_list.append(seed_level_info["MI_sen_p"])
         MI_sen_s_list.append(seed_level_info["MI_sen_s"])
         MI_sen_k_list.append(seed_level_info["MI_sen_k"])

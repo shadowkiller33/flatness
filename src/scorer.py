@@ -65,10 +65,20 @@ class Scorer:
             print(f"The kendall correlation between mutual information and acc is {c}")
         return (a, b, c)
 
+    def ours_correlation(self, flat, performance, verbose=False):
+        a = pearsonr(flat, performance)[0]
+        b = spearmanr(flat, performance)[0]
+        c = kendalltau(flat, performance)[0]
+        if verbose:
+            print(f"The pearson correlation between flat and acc is {a}")
+            print(f"The spearman correlation between flat and acc is {b}")
+            print(f"The kendall correlation between flat and acc is {c}")
+        return (a, b, c)
+
     def ours_correlation_MI(self, flatness, MI, performance, verbose=False):
         A, B, C = [], [], []
-        for i in range(100):
-            result = [y + 0.01 * i * x for (x, y) in zip(flatness, MI)]
+        for i in range(1000):
+            result = [y + 0.001 * (i-500) * x for (x, y) in zip(flatness, MI)]
             A.append(pearsonr(result, performance)[0])
             B.append(spearmanr(result, performance)[0])
             C.append(kendalltau(result, performance)[0])
@@ -86,8 +96,8 @@ class Scorer:
 
     def ours_correlation_sen(self, flatness, sen, performance, verbose=False):
         A, B, C = [], [], []
-        for i in range(100):
-            result = [y + 0.01 * i * x for (x, y) in zip(flatness, sen)]
+        for i in range(1000):
+            result = [y + 0.001 * (i-500) * x for (x, y) in zip(flatness, sen)]
             A.append(pearsonr(result, performance)[0])
             B.append(spearmanr(result, performance)[0])
             C.append(kendalltau(result, performance)[0])
@@ -105,8 +115,8 @@ class Scorer:
 
     def MI_sen_correlation(self, MI, sen, performance, verbose=False):
         A, B, C = [], [], []
-        for i in range(100):
-            result = [y + 0.01 * i * x for (x, y) in zip(MI, sen)]
+        for i in range(1000):
+            result = [y + 0.001 * (i-500)  * x for (x, y) in zip(MI, sen)]
             A.append(pearsonr(result, performance)[0])
             B.append(spearmanr(result, performance)[0])
             C.append(kendalltau(result, performance)[0])

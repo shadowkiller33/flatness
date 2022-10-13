@@ -189,7 +189,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             #print('sensitivity Time: ', stop - start)
 
 
-        sensitivity = sensitivity_compute(output, original_labels)*-1
+        sensitivity = sensitivity_compute(output, original_labels)
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
 
 
@@ -210,12 +210,12 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             )
             # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
             loss = cross_entropy(all_label_probs_flat, original_labels)
-            losses.append(loss)
+            losses.append(loss/100)
             #stop = timeit.default_timer()
             #print('flatness Time: ', stop - start)
             generator = Generator(model_name)
         flatness = sum(losses) / len(losses)
-        update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness*-1)
+        update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness)
 
 
 
@@ -265,9 +265,9 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
 
         # Magnitude Normalize
-        sen_list = [float(i) / sum(sen_list) for i in sen_list]
-        mi_list = [float(i) / sum(mi_list) for i in mi_list]
-        flat_list = [float(i) / sum(flat_list) for i in flat_list]
+        # sen_list = [float(i) / sum(sen_list) for i in sen_list]
+        # mi_list = [float(i) / sum(mi_list) for i in mi_list]
+        # flat_list = [float(i) / sum(flat_list) for i in flat_list]
 
 
         # sensitivity
@@ -284,6 +284,12 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         result_table[seed_id]["mi_s"] = mi_s
         result_table[seed_id]["mi_k"] = mi_k
 
+
+        # Flat
+        f_p, f_s, f_k = scorer.ours_correlation(flat_list, perf_list, verbose=verbose)
+        result_table[seed_id]["f_p"] = f_p
+        result_table[seed_id]["f_s"] = f_s
+        result_table[seed_id]["f_k"] = f_k
 
         #Flat + MI
         ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
