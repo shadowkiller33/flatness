@@ -3,14 +3,14 @@ import torch
 import numpy as np
 from src.utils.eval_utils import construct_prompt, chunk_size_helper, chunks
 from tqdm import tqdm
-
-
+from torch import nn
+import timeit
 class Generator:
     """wrapper class for generating logits"""
 
     def __init__(self, name) -> None:
         # TODO : make this general as a model card selection
-        print(f"Loading model {name}")
+
         self.model = GPT2LMHeadModel.from_pretrained(name, output_attentions=True)
         self.tokenizer = GPT2Tokenizer.from_pretrained(name)
         self.tokenizer.padding_side = "left"
@@ -184,7 +184,18 @@ class Generator:
                 )
         else:
             prompts = override_prompt
-
+        import timeit
+        #start = timeit.default_timer()
+        if perturbed == True:
+            with torch.no_grad():
+                # for param in self.model.parameters():
+                #     p = torch.randn(param.size()) * 0.0001
+                #     param.add_(p.cuda())
+                for layer in self.model.children():
+                    if isinstance(layer, nn.Linear):
+                        p = torch.randn(layer.state_dict()['weight'].size()) * 0.0001
+                        #     param.add_(p.cuda())
+                        layer.state_dict()['weight'].add_(p.cuda())
         chunked_prompts = list(chunks(prompts, chunk_size_helper(params)))
         for chunk_id, test_chunk_prompts in enumerate(chunked_prompts):
             if num_tokens_to_predict_override is not None:
@@ -197,7 +208,6 @@ class Generator:
                 perturbed=perturbed,
                 num_log_probs=params["api_num_log_prob"],
             )
-
             for answer_id, answer in enumerate(resp["choices"]):
                 all_raw_answers.append(answer)
         if return_all_prompts:
@@ -205,7 +215,7 @@ class Generator:
         else:
             return all_raw_answers
 
-    def complete_gpt2(self, prompt, l=10, perturbed=False, num_log_probs=None, echo=False):
+    def complete_gpt2(self, prompt, l=1, perturbed=False, num_log_probs=None, echo=False):
         """This function runs GPT-2 locally but places the outputs into an json that looks just like the one
         provided by the OpenAI API."""
         if isinstance(prompt, str):
@@ -215,11 +225,12 @@ class Generator:
         )
 
         # Add perturbation
-        if perturbed == True:
-            with torch.no_grad():
-                for param in self.model.parameters():
-                    p = torch.randn(param.size()) * 0.0001
-                    param.add_(p.cuda())
+
+        #stop = timeit.default_timer()
+        #print('Time: ', stop - start)
+                # for param in self.model.parameters():
+                #     p = torch.randn(param.size()) * 0.0001
+                #     param.add_(p.cuda())
 
         # greedily generate l tokens
         if l > 0:

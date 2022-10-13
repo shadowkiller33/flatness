@@ -12,12 +12,12 @@ source activate flat
 
 
 user_id=lshen30
-proj_dir=/home/${user_id}/flat
-export PYTHONPATH="/home/${user_id}/flat"
+proj_dir=/data/danielk/${user_id}/flat
+export PYTHONPATH="/data/danielk/${user_id}/flat"
 python -u $proj_dir/src/main.py  \
     --model gpt2  --dataset agnews \
-    --perturbed_num 7 --all_shots 4 \
-    --bs 16 --num_seeds 3  --subsample_test_set 50 \
+    --perturbed_num 7 --all_shots 5 \
+    --bs 20 --num_seeds 2  --subsample_test_set 128 \
     --mode mean  --approx \
     --data-dir $proj_dir/data \
     --output-dir $proj_dir/output \

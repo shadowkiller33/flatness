@@ -62,7 +62,6 @@ def load_results(path, filename):
 
 
 
-
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
     if seed not in table:
         prompt_info = {"id": prompt_id, "prompt": prompt, entry_name: result}
@@ -81,9 +80,10 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
 def save_results(params_list, model_name, path, filename, verbose=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
-
+    print(f"Loading model {model_name}")
 
     for params in params_list:
+
         if verbose:
             print(
                 f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
@@ -95,41 +95,28 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         prompt_id, prompt = params["prompt_id"], params["prompt"]
         seed = params["seed"]
 
+
+
+        # append demos for predictions
         (
             train_sentences,
             train_labels,
             test_sentences,
             test_labels,
         ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
+
+
+        import timeit
+        #start = timeit.default_timer()
         raw_resp_test = generator.get_model_response(
             params, train_sentences, train_labels, test_sentences
         )
         all_label_probs = generator.get_label_probs(
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
+        #stop = timeit.default_timer()
+        #print('normal inference Time: ', stop - start)
 
-        #### CALCULATE PERFORMANCE
-        content_free_inputs = ["N/A", "", "[MASK]"]
-        output = []
-        p_cf = generator.get_p_content_free(
-            params,
-            train_sentences,
-            train_labels,
-            content_free_inputs=content_free_inputs,
-        )
-        acc_original = 0#scorer.eval_accuracy(all_label_probs, test_labels)
-        acc_calibrated = scorer.eval_accuracy(
-            all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
-        )
-
-        update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
-        update_result_dict(
-            result_table, prompt_id, seed, prompt, "acc_c", acc_calibrated
-        )
-        update_result_dict(result_table, prompt_id, seed, prompt, "pc_f", p_cf.tolist())
-        update_result_dict(
-            result_table, prompt_id, seed, prompt, "perf", acc_calibrated
-        )
         #### MI
         original_labels = np.argmax(all_label_probs, axis=1)
         normalized_probs = softmax(all_label_probs, axis=1)
@@ -144,63 +131,77 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
 
 
+        #### CALCULATE PERFORMANCE
+        #start = timeit.default_timer()
+        content_free_inputs = ["N/A", "", "[MASK]"]
+        p_cf = generator.get_p_content_free(
+            params,
+            train_sentences,
+            train_labels,
+            content_free_inputs=content_free_inputs,
+        )
+        acc_original = 0#scorer.eval_accuracy(all_label_probs, test_labels)
+        acc_calibrated = scorer.eval_accuracy(
+            all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
+        )
+        #stop = timeit.default_timer()
+        #print('calibrated Time: ', stop - start)
 
 
-        # append demos for predictions
-        # (
-        #     train_sentences,
-        #     train_labels,
-        #     test_sentences,
-        #     test_labels,
-        # ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
-        # raw_resp_test = generator.get_model_response(
-        #     params, train_sentences, train_labels, test_sentences
-        # )
-        # all_label_probs = generator.get_label_probs(
-        #     params, raw_resp_test, train_sentences, train_labels, test_sentences
-        # )
-
-
-
-
-
-
-
+        update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
+        update_result_dict(
+            result_table, prompt_id, seed, prompt, "acc_c", acc_calibrated
+        )
+        update_result_dict(result_table, prompt_id, seed, prompt, "pc_f", p_cf.tolist())
+        update_result_dict(
+            result_table, prompt_id, seed, prompt, "perf", acc_calibrated
+        )
 
 
 
 
 
         #### CALCULATE SENSITIVITY
+
         perturbed = DataHelper.get_pertubed_set(
             prompt, params["perturbed_num"]
         )  # get perturbed data
         prompt_orders = DataHelper.get_prompt_order(
             train_sentences, train_labels, params["perturbed_num"]
         )
+        output = []
         for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
             # (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
             #     params, perturbed_prompt, verbose=False
             # )
+            #start = timeit.default_timer()
             train_sentences, train_labels = order
-            raw_resp_test = generator.get_model_response(
+            raw_resp_test_sen = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences
             )
-            all_label_probs111 = generator.get_label_probs(
-                params, raw_resp_test, train_sentences, train_labels, test_sentences
+            all_label_probs_sen = generator.get_label_probs(
+                params, raw_resp_test_sen, train_sentences, train_labels, test_sentences
             )
-            labels111 = np.argmax(all_label_probs111, axis=1)
+            labels111 = np.argmax(all_label_probs_sen, axis=1)
             # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
             output.append(labels111)
-        sensitivity = sensitivity_compute(output, original_labels)
+            #stop = timeit.default_timer()
+            #print('sensitivity Time: ', stop - start)
+
+
+        sensitivity = sensitivity_compute(output, original_labels)*-1
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
+
 
 
 
 
         #### CALCULATE FLATNESS
         losses = []
-        for i in range(params['perturbed_num']):
+
+        Length = params['perturbed_num']
+        for i in range(Length):
+            #start = timeit.default_timer()
             raw_resp_test_flat = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences, perturbed=True
             )
@@ -210,8 +211,12 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
             loss = cross_entropy(all_label_probs_flat, original_labels)
             losses.append(loss)
+            #stop = timeit.default_timer()
+            #print('flatness Time: ', stop - start)
+            generator = Generator(model_name)
         flatness = sum(losses) / len(losses)
         update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness*-1)
+
 
 
 

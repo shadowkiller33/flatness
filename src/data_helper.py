@@ -42,7 +42,7 @@ class DataHelper:
             )
 
     def get_in_context_prompt(
-        self, params, ins, seed, freeze_test_set=True, all=False, verbose=False
+        self, params, ins, seed, freeze_test_set=True, verbose=False
     ):
         (
             all_train_sentences,
@@ -51,7 +51,7 @@ class DataHelper:
             all_test_labels,
         ) = load_dataset(self.data_path, params, ins + "\n\n")
         # retrieve test set
-        if params["subsample_test_set"] is None or all == True:
+        if params["subsample_test_set"] is None:
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
             if verbose:
