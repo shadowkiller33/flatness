@@ -32,6 +32,7 @@ def print_results(table):
     # calculate correlations across seeds
     sen_p_list, sen_s_list, sen_k_list = [], [], []
     mi_p_list, mi_s_list, mi_k_list = [], [], []
+    f_p_list, f_s_list, f_k_list = [], [], []
     ours_MI_p_list, ours_MI_s_list, ours_MI_k_list = [], [], []
     ours_sen_p_list, ours_sen_s_list, ours_sen_k_list = [], [], []
     MI_sen_p_list, MI_sen_s_list, MI_sen_k_list = [], [], []
@@ -41,15 +42,19 @@ def print_results(table):
         sen_p_list.append(seed_level_info["sen_p"])
         sen_s_list.append(seed_level_info["sen_s"])
         sen_k_list.append(seed_level_info["sen_k"])
+
         mi_p_list.append(seed_level_info["mi_p"])
         mi_s_list.append(seed_level_info["mi_s"])
         mi_k_list.append(seed_level_info["mi_k"])
+
         ours_MI_p_list.append(seed_level_info["ours_MI_p"])
         ours_MI_s_list.append(seed_level_info["ours_MI_s"])
         ours_MI_k_list.append(seed_level_info["ours_MI_k"])
+
         ours_sen_p_list.append(seed_level_info["ours_sen_p"])
         ours_sen_s_list.append(seed_level_info["ours_sen_s"])
         ours_sen_k_list.append(seed_level_info["ours_sen_k"])
+
         MI_sen_p_list.append(seed_level_info["MI_sen_p"])
         MI_sen_s_list.append(seed_level_info["MI_sen_s"])
         MI_sen_k_list.append(seed_level_info["MI_sen_k"])
@@ -100,31 +105,29 @@ def print_results(table):
     print(f"Pearson Correlation: {sen_p_avg:.4}/{sen_p_var:.4}")
     print(f"Spearman Correlation: {sen_s_avg:.4}/{sen_s_var:.4}")
     print(f"Kendalltau Correlation: {sen_k_avg:.4}/{sen_k_var:.4}")
-    print("")
+    print()
     print("Avg/Var of mutual information's correlation to performance:")
     print(f"Pearson Correlation: {mi_p_avg:.4}/{mi_p_var:.4}")
     print(f"Spearman Correlation: {mi_s_avg:.4}/{mi_s_var:.4}")
     print(f"Kendalltau Correlation: {mi_k_avg:.4}/{mi_k_var:.4}")
-    print("")
+    print()
     print("Avg/Var of (flatness + MI) correlation to performance:")
     print(f"Pearson Correlation: {ours_MI_p_avg:.4}/{ours_MI_p_var:.4}")
     print(f"Spearman Correlation: {ours_MI_s_avg:.4}/{ours_MI_s_var:.4}")
     print(f"Kendalltau Correlation: {ours_MI_k_avg:.4}/{ours_MI_k_var:.4}")
-    print("")
+    print()
 
     print("Avg/Var of (flatness + sen) correlation to performance:")
     print(f"Pearson Correlation: {ours_sen_p_avg:.4}/{ours_sen_p_var:.4}")
     print(f"Spearman Correlation: {ours_sen_s_avg:.4}/{ours_sen_s_var:.4}")
-    print(
-        f"Kendalltau Correlation: {ours_sen_k_avg:.4}/{ours_sen_k_var:.4}"
-    )
-    print("")
+    print(f"Kendalltau Correlation: {ours_sen_k_avg:.4}/{ours_sen_k_var:.4}")
+    print()
 
     print("Avg/Var of (sen + MI) correlation to performance:")
     print(f"Pearson Correlation: {MI_sen_p_avg:.4}/{MI_sen_p_var:.4}")
     print(f"Spearman Correlation: {MI_sen_s_avg:.4}/{MI_sen_s_var:.4}")
     print(f"Kendalltau Correlation: {MI_sen_k_avg:.4}/{MI_sen_k_var:.4}")
-    print("")
+    print()
 
     # calculate accuracy across seeds
     acc_result = {}

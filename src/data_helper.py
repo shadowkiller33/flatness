@@ -25,9 +25,9 @@ ag_news_prompts = [
     "Read the paragraph below and explain its specific subject.",
     "Please read the following material and explain its main point.",
     "Provide your thoughts on the content below after reading it.",
-    "Describe the text's subject.",
+    "Describe the text's subject as follows.",
     "For what purpose does this news item exist?",
-    "Are there any world-related, sports, business, or science-related stories in this news?",
+    "Are there any world-related, sports, business, or science-related stories in this news?"
 ]
 
 
@@ -67,7 +67,7 @@ class DataHelper:
                 all_test_sentences, all_test_labels, params["subsample_test_set"]
             )
             if verbose:
-                print(f"selecting {len(test_labels)} subsample of test set", flush=True)
+                print(f"selecting {len(test_labels)} subsample of test set")
         # retrieve train set
         np.random.seed(seed)
         train_sentences, train_labels = random_sampling(

@@ -4,6 +4,8 @@ from copy import deepcopy
 import pandas as pd
 import numpy as np
 import json
+import pickle
+
 
 
 class loader_labeled(Dataset):
@@ -80,7 +82,7 @@ def random_sampling(sentences, labels, num):
     return deepcopy(selected_sentences), deepcopy(selected_labels)
 
 
-def load_sst2():
+def load_sst2(path):
     def process_raw_data_sst(lines):
         """from lines in dataset to two lists of sentences and labels respectively"""
         labels = []
@@ -90,9 +92,9 @@ def load_sst2():
             sentences.append(line[2:].strip())
         return sentences, labels
 
-    with open(f"{ROOT_DIR}/data/sst2/stsa.binary.train", "r") as f:
+    with open(f"{path}/stsa.binary.train", "r") as f:
         train_lines = f.readlines()
-    with open(f"{ROOT_DIR}/data/sst2/stsa.binary.test", "r") as f:
+    with open(f"{path}/stsa.binary.test", "r") as f:
         test_lines = f.readlines()
     train_sentences, train_labels = process_raw_data_sst(train_lines)
     test_sentences, test_labels = process_raw_data_sst(test_lines)
@@ -132,11 +134,11 @@ def load_agnews(path):
     return train_sentences, train_labels, test_sentences, test_labels
 
 
-def load_trec():
+def load_trec(path):
     inv_label_dict = {"NUM": 0, "LOC": 1, "HUM": 2, "DESC": 3, "ENTY": 4, "ABBR": 5}
     train_sentences = []
     train_labels = []
-    with open(f"{ROOT_DIR}/data/trec/train.txt", "r") as train_data:
+    with open(f"{path}/train.txt", "r") as train_data:
         for line in train_data:
             train_label = line.split(" ")[0].split(":")[0]
             train_label = inv_label_dict[train_label]
@@ -154,7 +156,7 @@ def load_trec():
 
     test_sentences = []
     test_labels = []
-    with open(f"{ROOT_DIR}/data/trec/test.txt", "r") as test_data:
+    with open(f"{path}/test.txt", "r") as test_data:
         for line in test_data:
             test_label = line.split(" ")[0].split(":")[0]
             test_label = inv_label_dict[test_label]
@@ -171,10 +173,10 @@ def load_trec():
     return train_sentences, train_labels, test_sentences, test_labels
 
 
-def get_cb():
+def get_cb(path):
     train_questions = []
     train_answers = []
-    with open(f"{ROOT_DIR}/data/cb/train.jsonl", "r") as f:
+    with open(f"{path}/train.jsonl", "r") as f:
         for line in f:
             myjson = json.loads(line)
             q = myjson["hypothesis"]
@@ -193,7 +195,7 @@ def get_cb():
 
     test_questions = []
     test_answers = []
-    with open(f"{ROOT_DIR}/data/cb/val.jsonl", "r") as f:
+    with open(f"{path}/val.jsonl", "r") as f:
         for line in f:
             myjson = json.loads(line)
             q = myjson["hypothesis"]
@@ -213,9 +215,9 @@ def get_cb():
     return train_questions, train_answers, test_questions, test_answers
 
 
-def load_dbpedia():
-    train_data = pd.read_csv(f"{ROOT_DIR}/data/dbpedia/train_subset.csv")
-    test_data = pd.read_csv(f"{ROOT_DIR}/data/dbpedia/test.csv")
+def load_dbpedia(path):
+    train_data = pd.read_csv(f"{path}/train_subset.csv")
+    test_data = pd.read_csv(f"{path}/test.csv")
 
     train_sentences = train_data["Text"]
     train_sentences = list([item.replace('""', '"') for item in train_sentences])
@@ -232,7 +234,7 @@ def load_dbpedia():
     return train_sentences, train_labels, test_sentences, test_labels
 
 
-def load_slot_movies(field_name):
+def load_slot_movies(field_name,path):
     all_fields = [
         "Actor",
         "Award",
@@ -256,7 +258,7 @@ def load_slot_movies(field_name):
     )
     target_tags = [f"B-{field_name}", f"I-{field_name}"]
 
-    with open(f"{ROOT_DIR}/data/slot-movies/train", "r") as f:
+    with open(f"{path}/train", "r") as f:
         lines = f.readlines()
         lines = [line.replace(" <=> <NULL>", "").strip() for line in lines]
     train_answers = []
@@ -278,7 +280,7 @@ def load_slot_movies(field_name):
             train_answers.append(answer.strip())
             train_sentences.append(untagged_line.strip())
 
-    with open(f"{ROOT_DIR}/data/slot-movies/test", "r") as f:
+    with open(f"{path}/test", "r") as f:
         lines = f.readlines()
         lines = [line.replace(" <=> <NULL>", "").strip() for line in lines]
     test_answers = []
@@ -303,8 +305,8 @@ def load_slot_movies(field_name):
     return train_sentences, train_answers, test_sentences, test_answers
 
 
-def load_atis(tag_name):
-    with open(f"{ROOT_DIR}/data/atis/atis.train.pkl", "rb") as stream:
+def load_atis(tag_name, path):
+    with open(f"{path}/atis.train.pkl", "rb") as stream:
         ds, dicts = pickle.load(stream)
 
     t2i, s2i, in2i = map(dicts.get, ["token_ids", "slot_ids", "intent_ids"])
@@ -334,7 +336,7 @@ def load_atis(tag_name):
             )  # [1:-1] cuts off BOS and EOS
             train_slot_strings.append(slot_string.strip())
 
-    with open(f"{ROOT_DIR}/data/atis/atis.test.pkl", "rb") as stream:
+    with open(f"{path}/atis.test.pkl", "rb") as stream:
         ds, dicts = pickle.load(stream)
 
     t2i, s2i, in2i = map(dicts.get, ["token_ids", "slot_ids", "intent_ids"])
@@ -360,10 +362,10 @@ def load_atis(tag_name):
     return train_sentences, train_slot_strings, test_sentences, test_slot_strings
 
 
-def load_lama(which_lama):
+def load_lama(which_lama,path):
     ### Load test data
     with open(
-        f"{ROOT_DIR}/data/lama/original_rob/P{which_lama}/test.jsonl", "r"
+        f"{path}/original_rob/P{which_lama}/test.jsonl", "r"
     ) as json_file:
         json_list = list(json_file)
     all_y_test = []
@@ -375,7 +377,7 @@ def load_lama(which_lama):
 
     ### Load train data
     with open(
-        f"{ROOT_DIR}/data/lama/original_rob/P{which_lama}/train.jsonl", "r"
+        f"{path}/original_rob/P{which_lama}/train.jsonl", "r"
     ) as json_file:
         json_list = list(json_file)
     all_y_train = []
@@ -385,7 +387,7 @@ def load_lama(which_lama):
         all_y_train.append(result["obj_label"])
         all_x_train.append(result["sub_label"])
 
-    with open(f"{ROOT_DIR}/data/lama/relations.jsonl", "r") as json_file:
+    with open(f"{path}/relations.jsonl", "r") as json_file:
         json_list = list(json_file)
     template = None
     for json_str in json_list:
@@ -404,10 +406,10 @@ def load_lama(which_lama):
     return all_x_train, all_y_train, all_x_test, all_y_test, template
 
 
-def load_rte():
+def load_rte(path):
     train_questions = []
     train_answers = []
-    with open("data/rte/train.jsonl", "r") as f:
+    with open(f"{path}/train.jsonl", "r") as f:
         for line in f:
             myjson = json.loads(line)
             q = myjson["hypothesis"]
@@ -422,7 +424,7 @@ def load_rte():
 
     test_questions = []
     test_answers = []
-    with open("data/rte/val.jsonl", "r") as f:
+    with open(f"{path}/val.jsonl", "r") as f:
         for line in f:
             myjson = json.loads(line)
             q = myjson["hypothesis"]

@@ -11,4 +11,4 @@ python $proj_dir/src/main.py  \
     --bs 4 --num_seeds 1  --subsample_test_set 20 --approx \
     --data-dir $proj_dir/data \
     --output-dir $proj_dir/output \
-    --verbose
+    --verbose --use-submit
