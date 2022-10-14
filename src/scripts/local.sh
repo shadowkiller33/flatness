@@ -8,8 +8,7 @@ export PYTHONPATH="/home/${user_id}/flatness"
 python $proj_dir/src/main.py  \
     --model gpt2-xl  --dataset agnews \
     --perturbed_num 7 --all_shots 4 \
-    --bs 1 --num_seeds 3  --subsample_test_set 10 \
-    --mode mean  --approx \
+    --bs 4 --num_seeds 1  --subsample_test_set 20 --approx \
     --data-dir $proj_dir/data \
     --output-dir $proj_dir/output \
-    --verbose
+    --verbose --use-submit
