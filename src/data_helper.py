@@ -27,7 +27,7 @@ ag_news_prompts = [
     "Provide your thoughts on the content below after reading it.",
     "Describe the text's subject as follows.",
     "For what purpose does this news item exist?",
-    "Are there any world-related, sports, business, or science-related stories in this news?"
+    "Are there any world-related, sports, business, or science-related stories in this news?",
 ]
 
 
@@ -69,7 +69,7 @@ class DataHelper:
             if verbose:
                 print(f"selecting {len(test_labels)} subsample of test set")
         # retrieve train set
-        np.random.seed(seed)
+        np.random.seed(0)
         train_sentences, train_labels = random_sampling(
             all_train_sentences, all_train_labels, params["num_shots"]
         )

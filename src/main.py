@@ -3,7 +3,7 @@ from src.utils.eval_utils import sensitivity_compute, cross_entropy
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
-from src.utils.io_utils import save_pickle
+from src.utils.io_utils import save_pickle, print_results
 from copy import deepcopy
 import logging
 import numpy as np
@@ -21,7 +21,7 @@ def job_wrapper(input_args):
     output_dir = input_args["output_dir"]
     verbose = input_args["verbose"]
     model = input_args["model"]
-    save_results([params_list], model, output_dir, filename, verbose)
+    save_results([params_list], model, output_dir, filename, verbose, debug=False)
 
 
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
@@ -39,7 +39,7 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
             table[seed][prompt_id][entry_name] = result
 
 
-def save_results(params_list, model_name, path, filename, verbose=False):
+def save_results(params_list, model_name, path, filename, verbose=False, debug=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
     print(f"Loading model {model_name}")
@@ -207,6 +207,63 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         save_file = f"{filename}_prompt{prompt_id}_seed{seed}.pkl"
         save_pickle(path, save_file, result_table)
         print(f"Done inference for prompt {prompt_id}, seed {seed}")
+
+    if debug:
+        # use when run locally without submitit
+        # Evaluate Correlations per seed
+        for seed_id in result_table.keys():
+            sen_list, mi_list, flat_list, perf_list = [], [], [], []
+            for prompt_id in result_table[seed_id]:
+                sen_list.append(result_table[seed_id][prompt_id]["sen"])
+                mi_list.append(result_table[seed_id][prompt_id]["mi"])
+                flat_list.append(result_table[seed_id][prompt_id]["flat"])
+                perf_list.append(result_table[seed_id][prompt_id]["perf"])
+
+            # Magnitude Normalize
+            sen_list = [float(i) / sum(sen_list) for i in sen_list]
+            mi_list = [float(i) / sum(mi_list) for i in mi_list]
+            flat_list = [float(i) / sum(flat_list) for i in flat_list]
+
+            # sensitivity
+            sen_p, sen_s, sen_k = scorer.sen_correlation(
+                sen_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["sen_p"] = sen_p
+            result_table[seed_id]["sen_s"] = sen_s
+            result_table[seed_id]["sen_k"] = sen_k
+
+            # MI
+            mi_p, mi_s, mi_k = scorer.MI_correlation(
+                mi_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["mi_p"] = mi_p
+            result_table[seed_id]["mi_s"] = mi_s
+            result_table[seed_id]["mi_k"] = mi_k
+
+            # Flat + MI
+            ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
+                mi_list, flat_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["ours_MI_p"] = ours_MI_p
+            result_table[seed_id]["ours_MI_s"] = ours_MI_s
+            result_table[seed_id]["ours_MI_k"] = ours_MI_k
+
+            # Flat + sensitivity
+            ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
+                sen_list, flat_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["ours_sen_p"] = ours_sen_p
+            result_table[seed_id]["ours_sen_s"] = ours_sen_s
+            result_table[seed_id]["ours_sen_k"] = ours_sen_k
+
+            # MI + sensitivity
+            MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
+                flat_list, mi_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["MI_sen_p"] = MI_sen_p
+            result_table[seed_id]["MI_sen_s"] = MI_sen_s
+            result_table[seed_id]["MI_sen_k"] = MI_sen_k
+            print_results(result_table)
 
 
 if __name__ == "__main__":
@@ -384,5 +441,10 @@ if __name__ == "__main__":
             executor.submit(job_wrapper, job_args)
     else:
         save_results(
-            all_params, model, args["output_dir"], filename, verbose=args["verbose"]
+            all_params,
+            model,
+            args["output_dir"],
+            filename,
+            verbose=args["verbose"],
+            debug=True,
         )
