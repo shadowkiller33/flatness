@@ -1,65 +1,27 @@
 import argparse
-from ast import Return
-from src.utils.eval_utils import sensitivity_compute,cross_entropy
+from src.utils.eval_utils import sensitivity_compute, cross_entropy
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
-from src.utils.io_utils import print_results, load_pickle, save_pickle
+from src.utils.io_utils import save_pickle, print_results
 from copy import deepcopy
 import logging
 import numpy as np
-import torch
-from scipy.special import entr
+import scipy
 from scipy.special import softmax
 import random
-import sys
+import submitit
 
 logger = logging.getLogger(__name__)
 
 
-def main(args):
-    default_params = {
-        "conditioned_on_correct_classes": True,
-        "subsample_test_set": args["subsample_test_set"],
-        "api_num_log_prob": args["api_num_log_prob"],
-        "approx": args["approx"],
-        "bs": args["bs"],
-        "mode": args["mode"],
-        "data_dir": args["data_dir"],
-        "perturbed_num": args["perturbed_num"],
-    }
-    model = args["models"]
-    verbose = args["verbose"]
-    # list of all experiment parameters to run
-    all_params = []
-    for dataset in args["datasets"]:
-        for num_shots in args["all_shots"]:
-            data_helper = DataHelper(args["data_dir"], dataset)
-            for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
-                for seed in args["seeds"]:
-                    p = deepcopy(default_params)
-                    p["prompt_id"] = prompt_id
-                    p["prompt"] = prompt
-                    p["seed"] = seed
-                    p["dataset"] = dataset
-                    p["num_shots"] = num_shots
-                    all_params.append(p)
-
-    filename = (
-        f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}.pkl"
-    )
-    if args["use_saved_results"]:
-        load_results(args["output_dir"], filename)
-    else:
-        save_results(all_params, model, args["output_dir"], filename, verbose=verbose)
-
-
-def load_results(path, filename):
-    # load saved results from model
-    result_table = load_pickle(path, filename)
-    print_results(result_table)
-
-
+def job_wrapper(input_args):
+    params_list = input_args["params"]
+    filename = input_args["filename"]
+    output_dir = input_args["output_dir"]
+    verbose = input_args["verbose"]
+    model = input_args["model"]
+    save_results([params_list], model, output_dir, filename, verbose, debug=False)
 
 
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
@@ -77,13 +39,10 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
             table[seed][prompt_id][entry_name] = result
 
 
-def save_results(params_list, model_name, path, filename, verbose=False):
+def save_results(params_list, model_name, path, filename, verbose=False, debug=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
     print(f"Loading model {model_name}")
-
-    # append demos for predictions
-
 
     for params in params_list:
 
@@ -92,12 +51,13 @@ def save_results(params_list, model_name, path, filename, verbose=False):
                 f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
             )
         data_helper = DataHelper(params["data_dir"], params["dataset"])
-        scorer = Scorer(params["mode"], params["bs"], generator.get_tokenizer())
+        scorer = Scorer(params["bs"], generator.get_tokenizer())
 
         # the current prompt we evaluate metrics on
         prompt_id, prompt = params["prompt_id"], params["prompt"]
         seed = params["seed"]
 
+        # append demos for predictions
         (
             train_sentences,
             train_labels,
@@ -109,33 +69,31 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             train_sentences, train_labels, num=1
         )
         train_sentences, train_labels = prompt_orders[0]
-        import timeit
-        #start = timeit.default_timer()
+        # import timeit
+        # start = timeit.default_timer()
         raw_resp_test = generator.get_model_response(
             params, train_sentences, train_labels, test_sentences
         )
         all_label_probs = generator.get_label_probs(
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
-        #stop = timeit.default_timer()
-        #print('normal inference Time: ', stop - start)
+        # stop = timeit.default_timer()
+        # print('normal inference Time: ', stop - start)
 
         #### MI
         original_labels = np.argmax(all_label_probs, axis=1)
         normalized_probs = softmax(all_label_probs, axis=1)
         avg_prob = np.average(normalized_probs, axis=0)
-        entropy1 = np.average(entr(normalized_probs).sum(axis=1))
-        entropy2 = entr(avg_prob).sum()
+
+        entropy1 = np.average(scipy.special.entr(normalized_probs).sum(axis=1))
+        entropy2 = scipy.special.entr(avg_prob).sum()
         mutual_info = entropy2 - entropy1
+
         # update result table
         update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
 
-
-
-
-
         #### CALCULATE PERFORMANCE
-        #start = timeit.default_timer()
+        # start = timeit.default_timer()
         content_free_inputs = ["N/A", "", "[MASK]"]
         p_cf = generator.get_p_content_free(
             params,
@@ -143,13 +101,12 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             train_labels,
             content_free_inputs=content_free_inputs,
         )
-        acc_original = 0#scorer.eval_accuracy(all_label_probs, test_labels)
+        acc_original = 0  # scorer.eval_accuracy(all_label_probs, test_labels)
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
-        #stop = timeit.default_timer()
-        #print('calibrated Time: ', stop - start)
-
+        # stop = timeit.default_timer()
+        # print('calibrated Time: ', stop - start)
 
         update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
         update_result_dict(
@@ -159,10 +116,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         update_result_dict(
             result_table, prompt_id, seed, prompt, "perf", acc_calibrated
         )
-
-
-
-
 
         #### CALCULATE SENSITIVITY
 
@@ -177,7 +130,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             # (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
             #     params, perturbed_prompt, verbose=False
             # )
-            #start = timeit.default_timer()
+            # start = timeit.default_timer()
             train_sentences, train_labels = order
             raw_resp_test_sen = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences
@@ -188,41 +141,35 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             labels111 = np.argmax(all_label_probs_sen, axis=1)
             # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
             output.append(labels111)
-            #stop = timeit.default_timer()
-            #print('sensitivity Time: ', stop - start)
-
+            # stop = timeit.default_timer()
+            # print('sensitivity Time: ', stop - start)
 
         sensitivity = sensitivity_compute(output, original_labels)
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
 
-
-
-
-
         #### CALCULATE FLATNESS
         losses = []
 
-        Length = params['perturbed_num']
+        Length = params["perturbed_num"]
         for i in range(Length):
-            #start = timeit.default_timer()
+            # start = timeit.default_timer()
             raw_resp_test_flat = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences, perturbed=True
             )
             all_label_probs_flat = generator.get_label_probs(
-                params, raw_resp_test_flat, train_sentences, train_labels, test_sentences
+                params,
+                raw_resp_test_flat,
+                train_sentences,
+                train_labels,
+                test_sentences,
             )
             # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
             loss = cross_entropy(all_label_probs_flat, original_labels)
             losses.append(loss)
-            #stop = timeit.default_timer()
-            #print('flatness Time: ', stop - start)
-            generator = Generator(model_name)
+            # stop = timeit.default_timer()
+            # print('flatness Time: ', stop - start)
         flatness = sum(losses) / len(losses)
         update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness)
-
-
-
-
 
         # save non-metric information
         # this might save too much information, disabled for now
@@ -256,74 +203,66 @@ def save_results(params_list, model_name, path, filename, verbose=False):
                 all_label_probs,
             )
 
-    # scorer.Flatness_correlation(flatness_all, performance_all)\
-    # Evaluate Correlations per seed
-    for seed_id in result_table.keys():
-        sen_list, mi_list, flat_list, perf_list = [], [], [], []
-        for prompt_id in result_table[seed_id]:
-            sen_list.append(result_table[seed_id][prompt_id]["sen"])
-            mi_list.append(result_table[seed_id][prompt_id]["mi"])
-            flat_list.append(result_table[seed_id][prompt_id]["flat"])
-            perf_list.append(result_table[seed_id][prompt_id]["perf"])
+        save_file = f"{filename}_prompt{prompt_id}_seed{seed}.pkl"
+        save_pickle(path, save_file, result_table)
+        print(f"Done inference for prompt {prompt_id}, seed {seed}")
 
+    if debug:
+        # use when run locally without submitit
+        # Evaluate Correlations per seed
+        for seed_id in result_table.keys():
+            sen_list, mi_list, flat_list, perf_list = [], [], [], []
+            for prompt_id in result_table[seed_id]:
+                sen_list.append(result_table[seed_id][prompt_id]["sen"])
+                mi_list.append(result_table[seed_id][prompt_id]["mi"])
+                flat_list.append(result_table[seed_id][prompt_id]["flat"])
+                perf_list.append(result_table[seed_id][prompt_id]["perf"])
 
-        # Magnitude Normalize
-        # sen_list = [float(i) / sum(sen_list) for i in sen_list]
-        # mi_list = [float(i) / sum(mi_list) for i in mi_list]
-        # flat_list = [float(i) / sum(flat_list) for i in flat_list]
+            # Magnitude Normalize
+            sen_list = [float(i) / sum(sen_list) for i in sen_list]
+            mi_list = [float(i) / sum(mi_list) for i in mi_list]
+            flat_list = [float(i) / sum(flat_list) for i in flat_list]
 
+            # sensitivity
+            sen_p, sen_s, sen_k = scorer.sen_correlation(
+                sen_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["sen_p"] = sen_p
+            result_table[seed_id]["sen_s"] = sen_s
+            result_table[seed_id]["sen_k"] = sen_k
 
-        # sensitivity
-        sen_p, sen_s, sen_k = scorer.sen_correlation(
-            sen_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["sen_p"] = sen_p
-        result_table[seed_id]["sen_s"] = sen_s
-        result_table[seed_id]["sen_k"] = sen_k
+            # MI
+            mi_p, mi_s, mi_k = scorer.MI_correlation(
+                mi_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["mi_p"] = mi_p
+            result_table[seed_id]["mi_s"] = mi_s
+            result_table[seed_id]["mi_k"] = mi_k
 
-        # MI
-        mi_p, mi_s, mi_k = scorer.MI_correlation(mi_list, perf_list, verbose=verbose)
-        result_table[seed_id]["mi_p"] = mi_p
-        result_table[seed_id]["mi_s"] = mi_s
-        result_table[seed_id]["mi_k"] = mi_k
+            # Flat + MI
+            ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
+                mi_list, flat_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["ours_MI_p"] = ours_MI_p
+            result_table[seed_id]["ours_MI_s"] = ours_MI_s
+            result_table[seed_id]["ours_MI_k"] = ours_MI_k
 
+            # Flat + sensitivity
+            ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
+                sen_list, flat_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["ours_sen_p"] = ours_sen_p
+            result_table[seed_id]["ours_sen_s"] = ours_sen_s
+            result_table[seed_id]["ours_sen_k"] = ours_sen_k
 
-        # Flat
-        f_p, f_s, f_k = scorer.ours_correlation(flat_list, perf_list, verbose=verbose)
-        result_table[seed_id]["f_p"] = f_p
-        result_table[seed_id]["f_s"] = f_s
-        result_table[seed_id]["f_k"] = f_k
-
-        #Flat + MI
-        ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
-            mi_list, flat_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["ours_MI_p"] = ours_MI_p
-        result_table[seed_id]["ours_MI_s"] = ours_MI_s
-        result_table[seed_id]["ours_MI_k"] = ours_MI_k
-
-
-
-
-        #Flat + sensitivity
-        ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
-            sen_list, flat_list,  perf_list, verbose=verbose
-        )
-        result_table[seed_id]["ours_sen_p"] = ours_sen_p
-        result_table[seed_id]["ours_sen_s"] = ours_sen_s
-        result_table[seed_id]["ours_sen_k"] = ours_sen_k
-
-
-        #MI + sensitivity
-        MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
-            flat_list, mi_list, perf_list, verbose=verbose
-        )
-        result_table[seed_id]["MI_sen_p"] = MI_sen_p
-        result_table[seed_id]["MI_sen_s"] = MI_sen_s
-        result_table[seed_id]["MI_sen_k"] = MI_sen_k
-
-    save_pickle(path, filename, result_table)
-    print_results(result_table)
+            # MI + sensitivity
+            MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
+                flat_list, mi_list, perf_list, verbose=verbose
+            )
+            result_table[seed_id]["MI_sen_p"] = MI_sen_p
+            result_table[seed_id]["MI_sen_s"] = MI_sen_s
+            result_table[seed_id]["MI_sen_k"] = MI_sen_k
+            print_results(result_table)
 
 
 if __name__ == "__main__":
@@ -371,14 +310,6 @@ if __name__ == "__main__":
         action="store",
         required=True,
         help="num training examples to use",
-    )
-    parser.add_argument(
-        "--mode",
-        dest="mode",
-        action="store",
-        required=True,
-        default="max",
-        help="the way to calculate flatness",
     )
     # other arguments
     parser.add_argument(
@@ -429,6 +360,11 @@ if __name__ == "__main__":
         default=False,
         help="whether to set token prob to zero if not in top 100",
     )
+    parser.add_argument(
+        "--use-submit",
+        action="store_true",
+        help="toggle to use submitit to submit multiple jobs on slurm-based systems",
+    )
     parser.add_argument("--data-dir", required=True, type=str)
 
     args = parser.parse_args()
@@ -448,4 +384,67 @@ if __name__ == "__main__":
     while len(set(seeds)) < int(args["num_seeds"]):
         seeds.append(random.randint(1, 100))
     args["seeds"] = seeds
-    main(args)
+
+    default_params = {
+        "conditioned_on_correct_classes": True,
+        "subsample_test_set": args["subsample_test_set"],
+        "api_num_log_prob": args["api_num_log_prob"],
+        "approx": args["approx"],
+        "bs": args["bs"],
+        "data_dir": args["data_dir"],
+        "perturbed_num": args["perturbed_num"],
+    }
+    model = args["models"]
+    verbose = args["verbose"]
+    # list of all experiment parameters to run
+    all_params = []
+    for dataset in args["datasets"]:
+        for num_shots in args["all_shots"]:
+            data_helper = DataHelper(args["data_dir"], dataset)
+            for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
+                for seed in args["seeds"]:
+                    p = deepcopy(default_params)
+                    p["prompt_id"] = prompt_id
+                    p["prompt"] = prompt
+                    p["seed"] = seed
+                    p["dataset"] = dataset
+                    p["num_shots"] = num_shots
+                    all_params.append(p)
+
+    filename = f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}"
+    if args["use_submit"]:
+        executor = submitit.AutoExecutor(folder=f"{args['output_dir']}/slurm")
+        # set timeout in min, and partition for running the job
+        executor.update_parameters(
+            name=filename,
+            tasks_per_node=1,
+            gpus_per_node=1,
+            nodes=1,
+            mem_gb=32,
+            cpus_per_task=4,
+            timeout_min=300,
+            slurm_partition="a100",
+            slurm_account="danielk_gpu",
+        )
+        print(f"Submit {len(all_params)} jobs at the same time")
+        # for i in range(len(all_params)):
+        for i in range(1):
+            # need to wrap jobs for submitit
+            job_args = {
+                "params": all_params[i],
+                "filename": filename,
+                "output_dir": args["output_dir"],
+                "verbose": verbose,
+                "model": model,
+            }
+            executor.submit(job_wrapper, job_args)
+    else:
+        save_results(
+            all_params,
+            model,
+            args["output_dir"],
+            filename,
+            verbose=args["verbose"],
+            debug=True,
+        )
+        

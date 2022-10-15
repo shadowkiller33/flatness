@@ -27,7 +27,7 @@ ag_news_prompts = [
     "Provide your thoughts on the content below after reading it.",
     "Describe the text's subject as follows.",
     "For what purpose does this news item exist?",
-    "Are there any world-related, sports, business, or science-related stories in this news?"
+    "Are there any world-related, sports, business, or science-related stories in this news?",
 ]
 
 
@@ -55,7 +55,9 @@ class DataHelper:
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
             if verbose:
-                print(f"selecting full test set ({len(all_test_labels)} examples)")
+                print(
+                    f"selecting full test set ({len(all_test_labels)} examples)",
+                )
         else:
             if freeze_test_set:
                 np.random.seed(0)  # always use seed 0 result if freeze
@@ -101,3 +103,4 @@ class DataHelper:
                 order_list.append((train_sentences, train_labels))
 
         return order_list
+        
