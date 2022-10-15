@@ -30,6 +30,8 @@ class Scorer:
         return acc_total
 
     def Flatness_correlation(self, flatness, performance, verbose=False):
+        flatness = [float(i) / sum(flatness) for i in flatness]
+
         a = pearsonr(flatness, performance)[0]
         b = spearmanr(flatness, performance)[0]
         c = kendalltau(flatness, performance)[0]
@@ -46,6 +48,8 @@ class Scorer:
         return (a, b, c)
 
     def sen_correlation(self, sen, performance, verbose=False):
+        sen = [float(i) / sum(sen) for i in sen]
+
         a = pearsonr(sen, performance)[0]
         b = spearmanr(sen, performance)[0]
         c = kendalltau(sen, performance)[0]
@@ -56,6 +60,8 @@ class Scorer:
         return (a, b, c)
 
     def MI_correlation(self, MI, performance, verbose=False):
+        MI = [float(i) / sum(MI) for i in MI]
+
         a = pearsonr(MI, performance)[0]
         b = spearmanr(MI, performance)[0]
         c = kendalltau(MI, performance)[0]
@@ -66,6 +72,8 @@ class Scorer:
         return (a, b, c)
 
     def ours_correlation(self, flat, performance, verbose=False):
+        flat = [float(i) / sum(flat) for i in flat]
+
         a = pearsonr(flat, performance)[0]
         b = spearmanr(flat, performance)[0]
         c = kendalltau(flat, performance)[0]
@@ -76,9 +84,12 @@ class Scorer:
         return (a, b, c)
 
     def ours_correlation_MI(self, flatness, MI, performance, verbose=False):
+        flatness = [float(i) / sum(flatness) for i in flatness]
+        MI = [float(i) / sum(MI) for i in MI]
+        performance = [float(i) / sum(performance) for i in performance]
         A, B, C = [], [], []
         for i in range(1000):
-            result = [y + 0.001 * (i-500) * x for (x, y) in zip(flatness, MI)]
+            result = [y + 0.01 * (i-500) * x for (x, y) in zip(flatness, MI)]
             A.append(pearsonr(result, performance)[0])
             B.append(spearmanr(result, performance)[0])
             C.append(kendalltau(result, performance)[0])
@@ -95,9 +106,12 @@ class Scorer:
         return (A[index], B[index], C[index])
 
     def ours_correlation_sen(self, flatness, sen, performance, verbose=False):
+        flatness = [float(i) / sum(flatness) for i in flatness]
+        sen = [float(i) / sum(sen) for i in sen]
+        performance = [float(i) / sum(performance) for i in performance]
         A, B, C = [], [], []
         for i in range(1000):
-            result = [y + 0.001 * (i-500) * x for (x, y) in zip(flatness, sen)]
+            result = [y + 0.01 * (i-500) * x for (x, y) in zip(flatness, sen)]
             A.append(pearsonr(result, performance)[0])
             B.append(spearmanr(result, performance)[0])
             C.append(kendalltau(result, performance)[0])
