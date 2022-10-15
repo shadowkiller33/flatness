@@ -65,8 +65,11 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             test_labels,
         ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
 
-        import timeit
-
+        prompt_orders = DataHelper.get_prompt_order(
+            train_sentences, train_labels, num=1
+        )
+        train_sentences, train_labels = prompt_orders[0]
+        # import timeit
         # start = timeit.default_timer()
         raw_resp_test = generator.get_model_response(
             params, train_sentences, train_labels, test_sentences
@@ -162,7 +165,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             )
             # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
             loss = cross_entropy(all_label_probs_flat, original_labels)
-            losses.append(loss / 100)
+            losses.append(loss)
             # stop = timeit.default_timer()
             # print('flatness Time: ', stop - start)
             generator = Generator(model_name)
