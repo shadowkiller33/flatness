@@ -186,7 +186,7 @@ class Generator:
                 )
         else:
             prompts = override_prompt
-        import timeit
+        # import timeit
 
         # start = timeit.default_timer()
         if perturbed == True:

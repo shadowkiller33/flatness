@@ -168,7 +168,6 @@ def save_results(params_list, model_name, path, filename, verbose=False, debug=F
             losses.append(loss)
             # stop = timeit.default_timer()
             # print('flatness Time: ', stop - start)
-            generator = Generator(model_name)
         flatness = sum(losses) / len(losses)
         update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness)
 
