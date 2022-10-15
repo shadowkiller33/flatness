@@ -36,6 +36,12 @@ cb_prompts = [
     "Read the paragraph and decide if the question can be answered from the text",
 ]
 
+dbpedia_prompts = [
+    "Classify the documents based on whether they are about a Company, School, Artist, Athlete, Politician, Transportation, Building, Nature, Village, Animal, Plant, Album, Film, or Book.",
+    "What label best describes this document?",
+    "What is the category of the following document?",
+]
+
 
 class DataHelper:
     def __init__(self, data_dir, dataset_name) -> None:
@@ -57,7 +63,9 @@ class DataHelper:
             all_test_labels,
         ) = load_dataset(self.data_path, params, ins + "\n\n")
         # retrieve test set
-        if params["subsample_test_set"] is None or (params["subsample_test_set"] > len(all_test_labels)):
+        if params["subsample_test_set"] is None or (
+            params["subsample_test_set"] > len(all_test_labels)
+        ):
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
             if verbose:
@@ -87,7 +95,10 @@ class DataHelper:
             return ag_news_prompts
         elif dataset == "cb":
             return cb_prompts
-        raise ValueError("dataset name not recognized")
+        elif dataset == "dbpedia":
+            return dbpedia_prompts
+        else:
+            raise ValueError("dataset name not recognized")
 
     @staticmethod
     def get_pertubed_set(prompt, num=7):
