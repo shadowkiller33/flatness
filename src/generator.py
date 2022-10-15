@@ -5,6 +5,8 @@ from src.utils.eval_utils import construct_prompt, chunk_size_helper, chunks
 from tqdm import tqdm
 from torch import nn
 import timeit
+
+
 class Generator:
     """wrapper class for generating logits"""
 
@@ -184,8 +186,9 @@ class Generator:
                 )
         else:
             prompts = override_prompt
-        import timeit
-        #start = timeit.default_timer()
+        # import timeit
+
+        # start = timeit.default_timer()
         if perturbed == True:
             with torch.no_grad():
                 # for param in self.model.parameters():
@@ -193,9 +196,9 @@ class Generator:
                 #     param.add_(p.cuda())
                 for layer in self.model.children():
                     if isinstance(layer, nn.Linear):
-                        p = torch.randn(layer.state_dict()['weight'].size()) * 0.0001
+                        p = torch.randn(layer.state_dict()["weight"].size()) * 0.0001
                         #     param.add_(p.cuda())
-                        layer.state_dict()['weight'].add_(p.cuda())
+                        layer.state_dict()["weight"].add_(p.cuda())
         chunked_prompts = list(chunks(prompts, chunk_size_helper(params)))
         for chunk_id, test_chunk_prompts in enumerate(chunked_prompts):
             if num_tokens_to_predict_override is not None:
@@ -215,7 +218,9 @@ class Generator:
         else:
             return all_raw_answers
 
-    def complete_gpt2(self, prompt, l=1, perturbed=False, num_log_probs=None, echo=False):
+    def complete_gpt2(
+        self, prompt, l=1, perturbed=False, num_log_probs=None, echo=False
+    ):
         """This function runs GPT-2 locally but places the outputs into an json that looks just like the one
         provided by the OpenAI API."""
         if isinstance(prompt, str):
@@ -226,11 +231,11 @@ class Generator:
 
         # Add perturbation
 
-        #stop = timeit.default_timer()
-        #print('Time: ', stop - start)
-                # for param in self.model.parameters():
-                #     p = torch.randn(param.size()) * 0.0001
-                #     param.add_(p.cuda())
+        # stop = timeit.default_timer()
+        # print('Time: ', stop - start)
+        # for param in self.model.parameters():
+        #     p = torch.randn(param.size()) * 0.0001
+        #     param.add_(p.cuda())
 
         # greedily generate l tokens
         if l > 0:
@@ -260,12 +265,12 @@ class Generator:
                     position_ids=position_ids,
                     return_dict=True,
                 )
-                    .logits.detach()
-                    .cpu()
+                .logits.detach()
+                .cpu()
             )
             if not echo:
                 # get the top tokens and probs for the generated l tokens
-                probs = torch.softmax(logits[:, -l - 1:], dim=2).cpu()
+                probs = torch.softmax(logits[:, -l - 1 :], dim=2).cpu()
             else:
                 # get the top tokens and probs for the context and the generated l tokens
                 probs = torch.softmax(logits, dim=2).cpu()
@@ -297,8 +302,8 @@ class Generator:
                 if not echo:
                     # cutoff the -1 here because the probs are shifted one over for LMs
                     for (
-                            current_element_top_log_probs,
-                            current_element_top_tokens,
+                        current_element_top_log_probs,
+                        current_element_top_tokens,
                     ) in zip(top_log_probs[batch_id][:-1], top_tokens[batch_id][:-1]):
                         # tokens is a list of the top token at each position
                         curr_json["logprobs"]["tokens"].append(
@@ -311,7 +316,7 @@ class Generator:
                         # top_logprobs is a list of dicts for the top K tokens. with each entry being {'token_name': log_prob}
                         temp = {}
                         for log_prob, token in zip(
-                                current_element_top_log_probs, current_element_top_tokens
+                            current_element_top_log_probs, current_element_top_tokens
                         ):
                             temp[self.tokenizer.decode(token.item())] = log_prob.item()
                         curr_json["logprobs"]["top_logprobs"].append(temp)
@@ -322,8 +327,8 @@ class Generator:
                     curr_json["logprobs"]["top_logprobs"].append("null")
                     # cutoff the -1 here because the probs are shifted one over for LMs
                     for index, (
-                            current_element_top_log_probs,
-                            current_element_top_tokens,
+                        current_element_top_log_probs,
+                        current_element_top_tokens,
                     ) in enumerate(
                         zip(top_log_probs[batch_id][:-1], top_tokens[batch_id][:-1])
                     ):
@@ -332,7 +337,7 @@ class Generator:
                             continue
                         temp = {}
                         for log_prob, token in zip(
-                                current_element_top_log_probs, current_element_top_tokens
+                            current_element_top_log_probs, current_element_top_tokens
                         ):
                             temp[self.tokenizer.decode(token.item())] = log_prob.item()
                         curr_json["logprobs"]["top_logprobs"].append(temp)
@@ -342,7 +347,7 @@ class Generator:
                         )
                     curr_json["logprobs"]["token_logprobs"].append("null")
                     for index, log_probs_token_position_j in enumerate(
-                            logprobs[batch_id][:-1]
+                        logprobs[batch_id][:-1]
                     ):
                         # probs are left shifted for LMs
                         curr_json["logprobs"]["token_logprobs"].append(
@@ -357,3 +362,4 @@ class Generator:
 
     def get_tokenizer(self):
         return self.tokenizer
+        
