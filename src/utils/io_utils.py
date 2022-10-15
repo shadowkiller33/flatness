@@ -47,6 +47,8 @@ def print_results(table):
         mi_s_list.append(seed_level_info["mi_s"])
         mi_k_list.append(seed_level_info["mi_k"])
 
+
+
         ours_MI_p_list.append(seed_level_info["ours_MI_p"])
         ours_MI_s_list.append(seed_level_info["ours_MI_s"])
         ours_MI_k_list.append(seed_level_info["ours_MI_k"])
@@ -58,6 +60,7 @@ def print_results(table):
         MI_sen_p_list.append(seed_level_info["MI_sen_p"])
         MI_sen_s_list.append(seed_level_info["MI_sen_s"])
         MI_sen_k_list.append(seed_level_info["MI_sen_k"])
+
 
     sen_p_avg, sen_p_var = np.average(np.array(sen_p_list)), np.var(
         np.array(sen_p_list)
@@ -81,6 +84,7 @@ def print_results(table):
         np.array(ours_MI_k_list)
     )
 
+
     MI_sen_p_avg, MI_sen_p_var = np.average(np.array(MI_sen_p_list)), np.var(
         np.array(MI_sen_p_list)
     )
@@ -90,6 +94,7 @@ def print_results(table):
     MI_sen_k_avg, MI_sen_k_var = np.average(np.array(MI_sen_k_list)), np.var(
         np.array(MI_sen_k_list)
     )
+
 
     ours_sen_p_avg, ours_sen_p_var = np.average(np.array(ours_sen_p_list)), np.var(
         np.array(ours_sen_p_list)

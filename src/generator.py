@@ -362,3 +362,4 @@ class Generator:
 
     def get_tokenizer(self):
         return self.tokenizer
+        

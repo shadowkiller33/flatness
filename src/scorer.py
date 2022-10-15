@@ -172,3 +172,4 @@ class Scorer:
             else:
                 correctness_list.append(0)
         return np.mean(correctness_list)
+        
