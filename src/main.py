@@ -203,9 +203,10 @@ def save_results(params_list, model_name, path, filename, verbose=False, debug=F
                 all_label_probs,
             )
 
-        save_file = f"{filename}_prompt{prompt_id}_seed{seed}.pkl"
-        save_pickle(path, save_file, result_table)
-        print(f"Done inference for prompt {prompt_id}, seed {seed}")
+        if not debug:
+            save_file = f"{filename}_prompt{prompt_id}_seed{seed}.pkl"
+            save_pickle(path, save_file, result_table)
+            print(f"Done inference for prompt {prompt_id}, seed {seed}")
 
     if debug:
         # use when run locally without submitit
@@ -262,6 +263,8 @@ def save_results(params_list, model_name, path, filename, verbose=False, debug=F
             result_table[seed_id]["MI_sen_p"] = MI_sen_p
             result_table[seed_id]["MI_sen_s"] = MI_sen_s
             result_table[seed_id]["MI_sen_k"] = MI_sen_k
+            save_file = save_file = f"{filename}.pkl"
+            save_pickle(path, save_file, result_table)
             print_results(result_table)
 
 
@@ -427,8 +430,8 @@ if __name__ == "__main__":
             slurm_account="danielk_gpu",
         )
         print(f"Submit {len(all_params)} jobs at the same time")
-        # for i in range(len(all_params)):
-        for i in range(1):
+        for i in range(len(all_params)):
+            # for i in range(1):
             # need to wrap jobs for submitit
             job_args = {
                 "params": all_params[i],
@@ -447,4 +450,3 @@ if __name__ == "__main__":
             verbose=args["verbose"],
             debug=True,
         )
-        
