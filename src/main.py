@@ -69,6 +69,7 @@ def save_results(params_list, model_name, path, filename, verbose=False, debug=F
             train_sentences, train_labels, num=1
         )
         train_sentences, train_labels = prompt_orders[0]
+
         # import timeit
         # start = timeit.default_timer()
         raw_resp_test = generator.get_model_response(
@@ -105,6 +106,8 @@ def save_results(params_list, model_name, path, filename, verbose=False, debug=F
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
+        if verbose:
+            print(f"Calibrated accuracy: {acc_calibrated}")
         # stop = timeit.default_timer()
         # print('calibrated Time: ', stop - start)
 

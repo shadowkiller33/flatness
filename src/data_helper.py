@@ -30,13 +30,19 @@ ag_news_prompts = [
     "Are there any world-related, sports, business, or science-related stories in this news?",
 ]
 
+# FIXME: add more prompts
+cb_prompts = [
+    "Is the description in question entailed from the text?",
+    "Read the paragraph and decide if the question can be answered from the text",
+]
+
 
 class DataHelper:
     def __init__(self, data_dir, dataset_name) -> None:
         # download data to specified dir if not already exist
         self.data_path = os.path.join(data_dir, dataset_name)
         Path(data_dir).mkdir(exist_ok=True, parents=True)
-        if not os.path.exists(f"{self.data_path}/train.csv"):
+        if not os.path.exists(f"{self.data_path}"):
             raise ValueError(
                 f"Download Dataset for {dataset_name} to {self.data_path} first!!"
             )
@@ -51,7 +57,7 @@ class DataHelper:
             all_test_labels,
         ) = load_dataset(self.data_path, params, ins + "\n\n")
         # retrieve test set
-        if params["subsample_test_set"] is None:
+        if params["subsample_test_set"] is None or (params["subsample_test_set"] > len(all_test_labels)):
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
             if verbose:
@@ -79,6 +85,8 @@ class DataHelper:
     def get_prompts(dataset):
         if dataset == "agnews":
             return ag_news_prompts
+        elif dataset == "cb":
+            return cb_prompts
         raise ValueError("dataset name not recognized")
 
     @staticmethod
@@ -103,4 +111,3 @@ class DataHelper:
                 order_list.append((train_sentences, train_labels))
 
         return order_list
-        
