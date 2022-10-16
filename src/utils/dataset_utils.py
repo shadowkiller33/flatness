@@ -539,7 +539,7 @@ def load_dataset(path, params, prompt):
             orig_test_sentences,
             orig_test_labels,
         ) = get_cb(path)
-        params["prompt_prefix"] = ""
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = ""
         params["a_prefix"] = "answer: "
         params["label_dict"] = {0: ["false"], 1: ["neither"], 2: ["true"]}

@@ -6,7 +6,7 @@ user_id=wtan12
 proj_dir=/home/${user_id}/flatness
 export PYTHONPATH="/home/${user_id}/flatness"
 python $proj_dir/src/main.py  \
-    --model gpt2-xl  --dataset cb \
+    --model gpt2  --dataset cb \
     --perturbed_num 7 --all_shots 4 \
     --bs 4 --num_seeds 1  --subsample_test_set 100 --approx \
     --data-dir $proj_dir/data \
