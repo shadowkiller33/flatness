@@ -31,12 +31,33 @@ ag_news_prompts = [
 ]
 
 cb_prompt = [
-    "Describe the text's subject as follows.",
-    "For what purpose does this news item exist?",
-    "Are there any world-related, sports, business, or science-related stories in this news?"
+    "Suppose we have the following premise, Can we infer that hypothesis? Yes, no, or maybe?",
+    "Based on the previous premise, is it true for the hypothesis?",
+    "Based on the following information, is the claim right?",
+    "Given that premise, does it follow that hypothesis? Yes, no, or maybe?",
+    "Given the premise, are we justified in saying that hypothesis? Yes, no, or maybe?",
+    "Based on the text, question: hypothesis is True, False, or Neither?",
+    "Keeping in mind the above text, consider: hypothesis  is always, sometimes, or never correct?"
+    "Given premise. Is it guaranteed true that hypothesis? Yes, no, or maybe?",
+    "Given that premise. Therefore, it must be true that hypothesis? Yes, no, or maybe?",
+    "Assume it is true that premise. Therefore, hypothesis is guaranteed, possible, or impossible?",
+    "Using only the following description and what you know about the world, hypothesis is definitely correct, incorrect, or inconclusive?",
+    "Take the following as truth. Then the hypothesis is true, false, or inconclusive?",
+    "Can we derive that hypothesis if we have the following premise? Yes, no, or perhaps?",
+    "Can we arrive at that conclusion if we possess the following information? Possibly, no, or both?",
+    "Does that premise flow from the given premise? Yes, no, or perhaps?",
+    "Does that information support the claim?",
+    "Is the assertion accurate in light of such information?",
+    "Considering the text, which of the following statements is True, False, or Both?",
+    "Think about the question: Is hypothesis always, occasionally, or never correct?",
+    "Can we derive that conclusion if we have the following information? Yes, no, or possibly?",
 ]
 
-
+dbpedia_prompt = [
+    "Given a list of categories: company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work, what category does the paragraph belong to?",
+    "Pick one category for the following text. The options are - company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work",
+    "Given a choice of categories company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work, the text refers to which one? "
+]
 
 class DataHelper:
     def __init__(self, data_dir, dataset_name) -> None:
@@ -82,6 +103,8 @@ class DataHelper:
             return ag_news_prompts
         elif dataset == 'cb':
             return cb_prompt
+        elif dataset == 'dbpedia':
+            return dbpedia_prompt
         raise ValueError("dataset name not recognized")
 
     @staticmethod
