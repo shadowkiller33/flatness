@@ -19,8 +19,6 @@ def save_pickle(path, name, data):
     if not os.path.exists(path):
         Path(path).mkdir(parents=True)
     file_name = os.path.join(path, name)
-    if os.path.isfile(file_name):
-        print("WARNING! overwriting existing saved files")
     with open(file_name, "wb") as file:
         pickle.dump(data, file)
     print(f"Result Table Saved to {file_name}")
@@ -47,7 +45,9 @@ def print_results(table):
         mi_s_list.append(seed_level_info["mi_s"])
         mi_k_list.append(seed_level_info["mi_k"])
 
-
+        f_p_list.append(seed_level_info["f_p"])
+        f_s_list.append(seed_level_info["f_s"])
+        f_k_list.append(seed_level_info["f_k"])
 
         ours_MI_p_list.append(seed_level_info["ours_MI_p"])
         ours_MI_s_list.append(seed_level_info["ours_MI_s"])
@@ -71,9 +71,15 @@ def print_results(table):
     sen_k_avg, sen_k_var = np.average(np.array(sen_k_list)), np.var(
         np.array(sen_k_list)
     )
+
     mi_p_avg, mi_p_var = np.average(np.array(mi_p_list)), np.var(np.array(mi_p_list))
     mi_s_avg, mi_s_var = np.average(np.array(mi_s_list)), np.var(np.array(mi_s_list))
     mi_k_avg, mi_k_var = np.average(np.array(mi_k_list)), np.var(np.array(mi_k_list))
+
+    f_p_avg, f_p_var = np.average(np.array(f_p_list)), np.var(np.array(f_p_list))
+    f_s_avg, f_s_var = np.average(np.array(f_s_list)), np.var(np.array(f_s_list))
+    f_k_avg, f_k_var = np.average(np.array(f_k_list)), np.var(np.array(f_k_list))
+
     ours_MI_p_avg, ours_MI_p_var = np.average(np.array(ours_MI_p_list)), np.var(
         np.array(ours_MI_p_list)
     )
@@ -115,6 +121,11 @@ def print_results(table):
     print(f"Pearson Correlation: {mi_p_avg:.4}/{mi_p_var:.4}")
     print(f"Spearman Correlation: {mi_s_avg:.4}/{mi_s_var:.4}")
     print(f"Kendalltau Correlation: {mi_k_avg:.4}/{mi_k_var:.4}")
+    print()
+    print("Avg/Var of Flatness's correlation to performance:")
+    print(f"Pearson Correlation: {f_p_avg:.4}/{f_p_var:.4}")
+    print(f"Spearman Correlation: {f_s_avg:.4}/{f_s_var:.4}")
+    print(f"Kendalltau Correlation: {f_k_avg:.4}/{f_k_var:.4}")
     print()
     print("Avg/Var of (flatness + MI) correlation to performance:")
     print(f"Pearson Correlation: {ours_MI_p_avg:.4}/{ours_MI_p_var:.4}")

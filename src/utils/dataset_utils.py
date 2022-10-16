@@ -453,7 +453,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_sst2()
+        ) = load_sst2(path)
         params["prompt_prefix"] = prompt
         params["q_prefix"] = "Review: "
         params["a_prefix"] = "Sentiment: "
@@ -496,10 +496,10 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_trec()
+        ) = load_trec(path)
         params[
             "prompt_prefix"
-        ] = "Classify the questions based on whether their answer type is a Number, Location, Person, Description, Entity, or Abbreviation.\n\n"
+        ] = prompt
         params["q_prefix"] = "Question: "
         params["a_prefix"] = "Answer Type: "
         params["label_dict"] = {
@@ -527,8 +527,8 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_rte()
-        params["prompt_prefix"] = ""
+        ) = load_rte(path)
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = " "
         params["a_prefix"] = "answer: "
         params["label_dict"] = {0: ["False"], 1: ["True"]}
@@ -543,8 +543,8 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = get_cb()
-        params["prompt_prefix"] = ""
+        ) = get_cb(path)
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = ""
         params["a_prefix"] = "answer: "
         params["label_dict"] = {0: ["false"], 1: ["neither"], 2: ["true"]}
@@ -558,10 +558,10 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_dbpedia()
+        ) = load_dbpedia(path)
         params[
             "prompt_prefix"
-        ] = "Classify the documents based on whether they are about a Company, School, Artist, Athlete, Politician, Transportation, Building, Nature, Village, Animal, Plant, Album, Film, or Book.\n\n"
+        ] = prompt
         params["q_prefix"] = "Article: "
         params["a_prefix"] = "Answer: "
         params["label_dict"] = {
@@ -602,7 +602,7 @@ def load_dataset(path, params, prompt):
     elif params["dataset"][:4] == "lama":
         which_lama = int(params["dataset"].split("_")[-1])
         all_x_train, all_y_train, all_x_test, all_y_test, template = load_lama(
-            which_lama
+            which_lama,path
         )
 
         # reject if template is not valid
@@ -616,7 +616,7 @@ def load_dataset(path, params, prompt):
             orig_test_sentences,
             orig_test_labels,
         ) = (all_x_train, all_y_train, all_x_test, all_y_test)
-        params["prompt_prefix"] = ""
+        params["prompt_prefix"] = prompt
         params["task_format"] = "qa"
         params["num_tokens_to_predict"] = 1
         params["template"] = template
@@ -657,7 +657,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_slot_movies(field_name)
+        ) = load_slot_movies(field_name,path)
         """
         Actor 944
         Award 54
@@ -673,7 +673,7 @@ def load_dataset(path, params, prompt):
         Year 655
         """
 
-        params["prompt_prefix"] = ""
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = "Sentence: "
         params["a_prefix"] = f"{field_name}: "
         params["task_format"] = "qa"
@@ -707,7 +707,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_atis(tag_name)
+        ) = load_atis(tag_name, path)
 
         name2prefix = {
             "airline_name": "Airline name",
@@ -715,7 +715,7 @@ def load_dataset(path, params, prompt):
             "depart_date.day_name": "Depart date - Day name",
         }
 
-        params["prompt_prefix"] = ""
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = "Sentence: "
         params["a_prefix"] = f"{name2prefix[tag_name]}: "
         params["task_format"] = "qa"

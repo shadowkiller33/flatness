@@ -30,16 +30,19 @@ ag_news_prompts = [
     "Are there any world-related, sports, business, or science-related stories in this news?"
 ]
 
+cb_prompt = [
+    "Describe the text's subject as follows.",
+    "For what purpose does this news item exist?",
+    "Are there any world-related, sports, business, or science-related stories in this news?"
+]
+
+
 
 class DataHelper:
     def __init__(self, data_dir, dataset_name) -> None:
         # download data to specified dir if not already exist
         self.data_path = os.path.join(data_dir, dataset_name)
-        Path(data_dir).mkdir(exist_ok=True, parents=True)
-        if not os.path.exists(f"{self.data_path}/train.csv"):
-            raise ValueError(
-                f"Download Dataset for {dataset_name} to {self.data_path} first!!"
-            )
+
 
     def get_in_context_prompt(
         self, params, ins, seed, freeze_test_set=True, verbose=False
@@ -77,6 +80,8 @@ class DataHelper:
     def get_prompts(dataset):
         if dataset == "agnews":
             return ag_news_prompts
+        elif dataset == 'cb':
+            return cb_prompt
         raise ValueError("dataset name not recognized")
 
     @staticmethod

@@ -109,16 +109,13 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             train_sentences, train_labels, num=1
         )
         train_sentences, train_labels = prompt_orders[0]
-        import timeit
-        #start = timeit.default_timer()
         raw_resp_test = generator.get_model_response(
             params, train_sentences, train_labels, test_sentences
         )
         all_label_probs = generator.get_label_probs(
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
-        #stop = timeit.default_timer()
-        #print('normal inference Time: ', stop - start)
+
 
         #### MI
         original_labels = np.argmax(all_label_probs, axis=1)
@@ -135,7 +132,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
 
         #### CALCULATE PERFORMANCE
-        #start = timeit.default_timer()
         content_free_inputs = ["N/A", "", "[MASK]"]
         p_cf = generator.get_p_content_free(
             params,
@@ -147,9 +143,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
-        #stop = timeit.default_timer()
-        #print('calibrated Time: ', stop - start)
-
 
         update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
         update_result_dict(
@@ -174,10 +167,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         )
         output = []
         for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
-            # (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
-            #     params, perturbed_prompt, verbose=False
-            # )
-            #start = timeit.default_timer()
             train_sentences, train_labels = order
             raw_resp_test_sen = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences
@@ -186,11 +175,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
                 params, raw_resp_test_sen, train_sentences, train_labels, test_sentences
             )
             labels111 = np.argmax(all_label_probs_sen, axis=1)
-            # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
             output.append(labels111)
-            #stop = timeit.default_timer()
-            #print('sensitivity Time: ', stop - start)
-
 
         sensitivity = sensitivity_compute(output, original_labels)
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
@@ -204,18 +189,14 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
         Length = params['perturbed_num']
         for i in range(Length):
-            #start = timeit.default_timer()
             raw_resp_test_flat = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences, perturbed=True
             )
             all_label_probs_flat = generator.get_label_probs(
                 params, raw_resp_test_flat, train_sentences, train_labels, test_sentences
             )
-            # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
             loss = cross_entropy(all_label_probs_flat, original_labels)
             losses.append(loss)
-            #stop = timeit.default_timer()
-            #print('flatness Time: ', stop - start)
             generator = Generator(model_name)
         flatness = sum(losses) / len(losses)
         update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness)
@@ -322,8 +303,11 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         result_table[seed_id]["MI_sen_s"] = MI_sen_s
         result_table[seed_id]["MI_sen_k"] = MI_sen_k
 
-    save_pickle(path, filename, result_table)
     print_results(result_table)
+    import pickle
+    with open(f'{filename}.pickle', 'wb') as handle:
+        pickle.dump(result_table, handle)
+
 
 
 if __name__ == "__main__":
