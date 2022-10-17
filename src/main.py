@@ -1,6 +1,6 @@
 import argparse
 from ast import Return
-from src.utils.eval_utils import sensitivity_compute,cross_entropy
+from src.utils.eval_utils import sensitivity_compute, cross_entropy
 from src.generator import Generator
 from src.scorer import Scorer
 from src.data_helper import DataHelper
@@ -60,8 +60,6 @@ def load_results(path, filename):
     print_results(result_table)
 
 
-
-
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
     if seed not in table:
         prompt_info = {"id": prompt_id, "prompt": prompt, entry_name: result}
@@ -83,7 +81,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
     print(f"Loading model {model_name}")
 
     # append demos for predictions
-
 
     for params in params_list:
 
@@ -116,7 +113,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
 
-
         #### MI
         original_labels = np.argmax(all_label_probs, axis=1)
         normalized_probs = softmax(all_label_probs, axis=1)
@@ -127,10 +123,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         # update result table
         update_result_dict(result_table, prompt_id, seed, prompt, "mi", mutual_info)
 
-
-
-
-
         #### CALCULATE PERFORMANCE
         content_free_inputs = ["N/A", "", "[MASK]"]
         p_cf = generator.get_p_content_free(
@@ -139,10 +131,12 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             train_labels,
             content_free_inputs=content_free_inputs,
         )
-        acc_original = 0#scorer.eval_accuracy(all_label_probs, test_labels)
+        acc_original = 0  # scorer.eval_accuracy(all_label_probs, test_labels)
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
+        if verbose:
+            print(f"Calibrated ACC: {acc_calibrated}")
 
         update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
         update_result_dict(
@@ -152,10 +146,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         update_result_dict(
             result_table, prompt_id, seed, prompt, "perf", acc_calibrated
         )
-
-
-
-
 
         #### CALCULATE SENSITIVITY
 
@@ -180,30 +170,26 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         sensitivity = sensitivity_compute(output, original_labels)
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
 
-
-
-
-
         #### CALCULATE FLATNESS
         losses = []
 
-        Length = params['perturbed_num']
+        Length = params["perturbed_num"]
         for i in range(Length):
             raw_resp_test_flat = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences, perturbed=True
             )
             all_label_probs_flat = generator.get_label_probs(
-                params, raw_resp_test_flat, train_sentences, train_labels, test_sentences
+                params,
+                raw_resp_test_flat,
+                train_sentences,
+                train_labels,
+                test_sentences,
             )
             loss = cross_entropy(all_label_probs_flat, original_labels)
             losses.append(loss)
             generator = Generator(model_name)
         flatness = sum(losses) / len(losses)
         update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness)
-
-
-
-
 
         # save non-metric information
         # this might save too much information, disabled for now
@@ -247,12 +233,10 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             flat_list.append(result_table[seed_id][prompt_id]["flat"])
             perf_list.append(result_table[seed_id][prompt_id]["perf"])
 
-
         # Magnitude Normalize
         # sen_list = [float(i) / sum(sen_list) for i in sen_list]
         # mi_list = [float(i) / sum(mi_list) for i in mi_list]
         # flat_list = [float(i) / sum(flat_list) for i in flat_list]
-
 
         # sensitivity
         sen_p, sen_s, sen_k = scorer.sen_correlation(
@@ -268,14 +252,13 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         result_table[seed_id]["mi_s"] = mi_s
         result_table[seed_id]["mi_k"] = mi_k
 
-
         # Flat
         f_p, f_s, f_k = scorer.ours_correlation(flat_list, perf_list, verbose=verbose)
         result_table[seed_id]["f_p"] = f_p
         result_table[seed_id]["f_s"] = f_s
         result_table[seed_id]["f_k"] = f_k
 
-        #Flat + MI
+        # Flat + MI
         ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
             mi_list, flat_list, perf_list, verbose=verbose
         )
@@ -283,19 +266,15 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         result_table[seed_id]["ours_MI_s"] = ours_MI_s
         result_table[seed_id]["ours_MI_k"] = ours_MI_k
 
-
-
-
-        #Flat + sensitivity
+        # Flat + sensitivity
         ours_sen_p, ours_sen_s, ours_sen_k = scorer.ours_correlation_sen(
-            sen_list, flat_list,  perf_list, verbose=verbose
+            sen_list, flat_list, perf_list, verbose=verbose
         )
         result_table[seed_id]["ours_sen_p"] = ours_sen_p
         result_table[seed_id]["ours_sen_s"] = ours_sen_s
         result_table[seed_id]["ours_sen_k"] = ours_sen_k
 
-
-        #MI + sensitivity
+        # MI + sensitivity
         MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
             sen_list, mi_list, perf_list, verbose=verbose
         )
@@ -305,9 +284,9 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
     print_results(result_table)
     import pickle
-    with open(f'{filename}.pickle', 'wb') as handle:
-        pickle.dump(result_table, handle)
 
+    with open(f"{path}/{filename}.pickle", "wb") as handle:
+        pickle.dump(result_table, handle)
 
 
 if __name__ == "__main__":
