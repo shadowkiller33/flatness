@@ -33,7 +33,7 @@ ag_news_prompts = [
 cb_prompt = [
     "Suppose we have the following premise, Can we infer that hypothesis? Yes, no, or maybe?",
     "Based on the previous premise, is it true for the hypothesis?",
-    "Based on the following information, is the claim right?",
+    "See on the following information, is the claim right?",
     "Given that premise, does it follow that hypothesis? Yes, no, or maybe?",
     "Given the premise, are we justified in saying that hypothesis? Yes, no, or maybe?",
     "Based on the text, question: hypothesis is True, False, or Neither?",

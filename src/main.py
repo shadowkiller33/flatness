@@ -297,7 +297,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
         #MI + sensitivity
         MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
-            flat_list, mi_list, perf_list, verbose=verbose
+            sen_list, mi_list, perf_list, verbose=verbose
         )
         result_table[seed_id]["MI_sen_p"] = MI_sen_p
         result_table[seed_id]["MI_sen_s"] = MI_sen_s
