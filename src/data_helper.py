@@ -27,7 +27,7 @@ ag_news_prompts = [
     "Provide your thoughts on the content below after reading it.",
     "Describe the text's subject as follows.",
     "For what purpose does this news item exist?",
-    "Are there any world-related, sports, business, or science-related stories in this news?"
+    "Are there any world-related, sports, business, or science-related stories in this news?",
 ]
 
 cb_prompt = [
@@ -54,16 +54,33 @@ cb_prompt = [
 ]
 
 dbpedia_prompt = [
+    "What label best describes this paragraph?",
+    "What is this paragraph regarding for?",
+    "What is the category of the following paragraph?",
+    "Which is the most relevant topic of the following paragraph?",
+    "Give the topic of the given text.",
+    "Read the text below, provide its focused topic.",
+    "Is this paragraph regarding company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work?",
+    "What label would you use to characterize this paragraph?",
+    "What term best sums up this paragraph?",
+    "Which category most accurately sums up this paragraph?",
+    "What label would you use to characterize this paragraph?",
+    "Is this paragraph related to company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work?",
+    "Does this news story have anything to do with company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work?",
+    "Read the paragraph below and explain its specific subject.",
+    "Please read the following material and explain its main point.",
+    "Describe the text's subject as follows.",
+    "Are there any company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work content in this paragraph?"
     "Given a list of categories: company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work, what category does the paragraph belong to?",
     "Pick one category for the following text. The options are - company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work",
-    "Given a choice of categories company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work, the text refers to which one? "
+    "Given a choice of categories company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work, the text refers to which one? ",
 ]
+
 
 class DataHelper:
     def __init__(self, data_dir, dataset_name) -> None:
         # download data to specified dir if not already exist
         self.data_path = os.path.join(data_dir, dataset_name)
-
 
     def get_in_context_prompt(
         self, params, ins, seed, freeze_test_set=True, verbose=False
@@ -101,9 +118,9 @@ class DataHelper:
     def get_prompts(dataset):
         if dataset == "agnews":
             return ag_news_prompts
-        elif dataset == 'cb':
+        elif dataset == "cb":
             return cb_prompt
-        elif dataset == 'dbpedia':
+        elif dataset == "dbpedia":
             return dbpedia_prompt
         raise ValueError("dataset name not recognized")
 
