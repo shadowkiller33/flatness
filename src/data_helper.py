@@ -76,6 +76,28 @@ dbpedia_prompt = [
     "Given a choice of categories company, educational institution, artist, athlete, office holder, mean of transportation, building, natural place, village, animal, plant, album, film or written work, the text refers to which one? ",
 ]
 
+sst2_prompt = [
+    "What sentiment best describes this review?",
+    "Which emotion best sums up this review?" "Is this review positive or negative?",
+    "Give the sentiment of the given text.",
+    "Read the text below, does the review has positive or negative sentiment?"
+    "What sentiment would you use to characterize this review?",
+    "Is this a piece of postive or negative review?",
+    "Provide your thoughts on the content below after reading it.",
+    "Are there positive or negative sentiments in this review?"
+    "What is the opinion of this review? Positive or negative?",
+    "What is the sentiment of the following review?",
+    "Which is the most relevant sentiment of the following review? Positive or negative?",
+    "Read the text below, provide its sentiment.",
+    "What term best sums up this review?",
+    "Which sentiment most accurately sums up this review?",
+    "What label would you use to characterize this review?",
+    "Please read the following material and explain its main point.",
+    "Provide your thoughts on the content below after reading it.",
+    "Describe the text's subject as follows.",
+    "How do you feel about the following review? Positive or negative?",
+]
+
 
 class DataHelper:
     def __init__(self, data_dir, dataset_name) -> None:
@@ -122,6 +144,8 @@ class DataHelper:
             return cb_prompt
         elif dataset == "dbpedia":
             return dbpedia_prompt
+        elif dataset == "sst2":
+            return sst2_prompt
         raise ValueError("dataset name not recognized")
 
     @staticmethod
