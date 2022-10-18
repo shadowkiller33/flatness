@@ -83,20 +83,22 @@ class Scorer:
             print(f"The kendall correlation between flat and acc is {c}")
         return (a, b, c)
 
-    def ours_correlation_MI(self,  MI,flatness, performance, verbose=False):
+    def ours_correlation_MI(self, MI, flatness, performance, verbose=False):
         flatness = [float(i) / sum(flatness) for i in flatness]
         MI = [float(i) / sum(MI) for i in MI]
         performance = [float(i) / sum(performance) for i in performance]
         A, B, C = [], [], []
         for i in range(1000):
-            result = [y + 0.002 * (i-500) * x for (x, y) in zip(flatness, MI)]
+            result = [y + 0.002 * (i - 500) * x for (x, y) in zip(flatness, MI)]
             A.append(abs(pearsonr(result, performance)[0]))
             B.append(abs(spearmanr(result, performance)[0]))
             C.append(abs(kendalltau(result, performance)[0]))
         index = A.index(max(A))
         if verbose:
             print(f"The best alpha (weighted factor) is {index}")
-            print(f"The pearson correlation between ours (flatness + MI) and acc is {A[index]}")
+            print(
+                f"The pearson correlation between ours (flatness + MI) and acc is {A[index]}"
+            )
             print(
                 f"The spearman correlation between ours (flatness + MI) and acc is {B[index]}"
             )
@@ -105,20 +107,22 @@ class Scorer:
             )
         return (A[index], B[index], C[index])
 
-    def ours_correlation_sen(self,  sen,flatness, performance, verbose=False):
+    def ours_correlation_sen(self, sen, flatness, performance, verbose=False):
         flatness = [float(i) / sum(flatness) for i in flatness]
         sen = [float(i) / sum(sen) for i in sen]
         performance = [float(i) / sum(performance) for i in performance]
         A, B, C = [], [], []
         for i in range(1000):
-            result = [y + 0.002 * (i-500) * x for (x, y) in zip(flatness, sen)]
+            result = [y + 0.002 * (i - 500) * x for (x, y) in zip(flatness, sen)]
             A.append(abs(pearsonr(result, performance)[0]))
             B.append(abs(spearmanr(result, performance)[0]))
             C.append(abs(kendalltau(result, performance)[0]))
         index = A.index(max(A))
         if verbose:
             print(f"The best alpha (weighted factor) is {index}")
-            print(f"The pearson correlation between ours (flatness + sen) and acc is {A[index]}")
+            print(
+                f"The pearson correlation between ours (flatness + sen) and acc is {A[index]}"
+            )
             print(
                 f"The spearman correlation between ours (flatness + sen) and acc is {B[index]}"
             )
@@ -133,7 +137,7 @@ class Scorer:
         sen = [float(i) / sum(sen) for i in sen]
         performance = [float(i) / sum(performance) for i in performance]
         for i in range(1000):
-            result = [x + 0.002 * (i-500)  * x for (x, y) in zip(MI, sen)]
+            result = [x + 0.002 * (i - 500) * x for (x, y) in zip(MI, sen)]
             A.append(abs(pearsonr(result, performance)[0]))
             B.append(abs(spearmanr(result, performance)[0]))
             C.append(abs(kendalltau(result, performance)[0]))
@@ -141,16 +145,9 @@ class Scorer:
         if verbose:
             print(f"The best alpha (weighted factor) is {index}")
             print(f"The pearson correlation between (MI + sen) and acc is {A[index]}")
-            print(
-                f"The spearman correlation between (MI + sen) and acc is {B[index]}"
-            )
-            print(
-                f"The kendall correlation between (MI + sen) and acc is {C[index]}"
-            )
+            print(f"The spearman correlation between (MI + sen) and acc is {B[index]}")
+            print(f"The kendall correlation between (MI + sen) and acc is {C[index]}")
         return (A[index], B[index], C[index])
-
-
-
 
     def flat(self, input):
         if self.mode == "mean":

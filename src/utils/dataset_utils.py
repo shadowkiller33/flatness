@@ -7,7 +7,6 @@ import json
 import pickle
 
 
-
 class loader_labeled(Dataset):
     # Data loader for labeled data
     def __init__(
@@ -234,7 +233,7 @@ def load_dbpedia(path):
     return train_sentences, train_labels, test_sentences, test_labels
 
 
-def load_slot_movies(field_name,path):
+def load_slot_movies(field_name, path):
     all_fields = [
         "Actor",
         "Award",
@@ -362,11 +361,9 @@ def load_atis(tag_name, path):
     return train_sentences, train_slot_strings, test_sentences, test_slot_strings
 
 
-def load_lama(which_lama,path):
+def load_lama(which_lama, path):
     ### Load test data
-    with open(
-        f"{path}/original_rob/P{which_lama}/test.jsonl", "r"
-    ) as json_file:
+    with open(f"{path}/original_rob/P{which_lama}/test.jsonl", "r") as json_file:
         json_list = list(json_file)
     all_y_test = []
     all_x_test = []
@@ -376,9 +373,7 @@ def load_lama(which_lama,path):
         all_x_test.append(result["sub_label"])
 
     ### Load train data
-    with open(
-        f"{path}/original_rob/P{which_lama}/train.jsonl", "r"
-    ) as json_file:
+    with open(f"{path}/original_rob/P{which_lama}/train.jsonl", "r") as json_file:
         json_list = list(json_file)
     all_y_train = []
     all_x_train = []
@@ -497,9 +492,7 @@ def load_dataset(path, params, prompt):
             orig_test_sentences,
             orig_test_labels,
         ) = load_trec(path)
-        params[
-            "prompt_prefix"
-        ] = prompt
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = "Question: "
         params["a_prefix"] = "Answer Type: "
         params["label_dict"] = {
@@ -559,9 +552,7 @@ def load_dataset(path, params, prompt):
             orig_test_sentences,
             orig_test_labels,
         ) = load_dbpedia(path)
-        params[
-            "prompt_prefix"
-        ] = prompt
+        params["prompt_prefix"] = prompt
         params["q_prefix"] = "Article: "
         params["a_prefix"] = "Answer: "
         params["label_dict"] = {
@@ -602,7 +593,7 @@ def load_dataset(path, params, prompt):
     elif params["dataset"][:4] == "lama":
         which_lama = int(params["dataset"].split("_")[-1])
         all_x_train, all_y_train, all_x_test, all_y_test, template = load_lama(
-            which_lama,path
+            which_lama, path
         )
 
         # reject if template is not valid
@@ -657,7 +648,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_slot_movies(field_name,path)
+        ) = load_slot_movies(field_name, path)
         """
         Actor 944
         Award 54
