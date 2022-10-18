@@ -80,7 +80,8 @@ sst2_prompt = [
     "What sentiment best describes this review?",
     "Which emotion best sums up this review?" "Is this review positive or negative?",
     "Give the sentiment of the given text.",
-    "Read the text below, does the review has positive or negative sentiment?"
+    "Read the text below, does the review has positive or negative sentiment?",
+    "Read the material below; is there a positive or negative tone to the review?",
     "What sentiment would you use to characterize this review?",
     "Is this a piece of postive or negative review?",
     "Provide your thoughts on the content below after reading it.",
