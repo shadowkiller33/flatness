@@ -536,8 +536,8 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = get_cb(path)
-        params["prompt_prefix"] = prompt
+        ) = get_cb()
+        params["prompt_prefix"] = ""
         params["q_prefix"] = ""
         params["a_prefix"] = "answer: "
         params["label_dict"] = {0: ["false"], 1: ["neither"], 2: ["true"]}
@@ -551,8 +551,10 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_dbpedia(path)
-        params["prompt_prefix"] = prompt
+        ) = load_dbpedia()
+        params[
+            "prompt_prefix"
+        ] = "Classify the documents based on whether they are about a Company, School, Artist, Athlete, Politician, Transportation, Building, Nature, Village, Animal, Plant, Album, Film, or Book.\n\n"
         params["q_prefix"] = "Article: "
         params["a_prefix"] = "Answer: "
         params["label_dict"] = {
@@ -698,7 +700,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_atis(tag_name, path)
+        ) = load_atis(tag_name)
 
         name2prefix = {
             "airline_name": "Airline name",
