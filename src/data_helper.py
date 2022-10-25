@@ -115,7 +115,9 @@ class DataHelper:
             all_test_labels,
         ) = load_dataset(self.data_path, params, ins + "\n\n")
         # retrieve test set
-        if params["subsample_test_set"] is None:
+        if params["subsample_test_set"] is None or (
+            params["subsample_test_set"] > len(all_test_labels)
+        ):
             # use all test
             test_sentences, test_labels = all_test_sentences, all_test_labels
             if verbose:

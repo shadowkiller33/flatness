@@ -89,7 +89,7 @@ class Scorer:
         performance = [float(i) / sum(performance) for i in performance]
         A, B, C = [], [], []
         for i in range(1000):
-            result = [y + 0.002 * (i - 500) * x for (x, y) in zip(flatness, MI)]
+            result = [y + 0.0002 * (i - 500) * x for (x, y) in zip(flatness, MI)]
             A.append(abs(pearsonr(result, performance)[0]))
             B.append(abs(spearmanr(result, performance)[0]))
             C.append(abs(kendalltau(result, performance)[0]))
@@ -113,7 +113,7 @@ class Scorer:
         performance = [float(i) / sum(performance) for i in performance]
         A, B, C = [], [], []
         for i in range(1000):
-            result = [y + 0.002 * (i - 500) * x for (x, y) in zip(flatness, sen)]
+            result = [y + 0.0002 * (i - 500) * x for (x, y) in zip(flatness, sen)]
             A.append(abs(pearsonr(result, performance)[0]))
             B.append(abs(spearmanr(result, performance)[0]))
             C.append(abs(kendalltau(result, performance)[0]))
@@ -137,7 +137,7 @@ class Scorer:
         sen = [float(i) / sum(sen) for i in sen]
         performance = [float(i) / sum(performance) for i in performance]
         for i in range(1000):
-            result = [x + 0.002 * (i - 500) * x for (x, y) in zip(MI, sen)]
+            result = [y + 0.0002 * (i - 500) * x for (x, y) in zip(MI, sen)]
             A.append(abs(pearsonr(result, performance)[0]))
             B.append(abs(spearmanr(result, performance)[0]))
             C.append(abs(kendalltau(result, performance)[0]))
