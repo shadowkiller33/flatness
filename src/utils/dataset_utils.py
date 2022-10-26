@@ -81,7 +81,7 @@ def random_sampling(sentences, labels, num):
     return deepcopy(selected_sentences), deepcopy(selected_labels)
 
 
-def load_sst2(path):
+def load_sst2(path, rerank):
     def process_raw_data_sst(lines):
         """from lines in dataset to two lists of sentences and labels respectively"""
         labels = []
@@ -93,16 +93,23 @@ def load_sst2(path):
 
     with open(f"{path}/stsa.binary.train", "r") as f:
         train_lines = f.readlines()
-    with open(f"{path}/stsa.binary.test", "r") as f:
-        test_lines = f.readlines()
+    if rerank:
+        with open(f"{path}/stsa.binary.test_rerank", "r") as f:
+            test_lines = f.readlines()
+    else:
+        with open(f"{path}/stsa.binary.test", "r") as f:
+            test_lines = f.readlines()
     train_sentences, train_labels = process_raw_data_sst(train_lines)
     test_sentences, test_labels = process_raw_data_sst(test_lines)
     return train_sentences, train_labels, test_sentences, test_labels
 
 
-def load_agnews(path):
+def load_agnews(path, rerank):
     train_data = pd.read_csv(f"{path}/train.csv")
-    test_data = pd.read_csv(f"{path}/test.csv")
+    if rerank:
+        test_data = pd.read_csv(f"{path}/test_rerank.csv")
+    else:
+        test_data = pd.read_csv(f"{path}/test.csv")
 
     train_sentences = train_data["Title"] + ". " + train_data["Description"]
     train_sentences = list(
@@ -172,7 +179,7 @@ def load_trec(path):
     return train_sentences, train_labels, test_sentences, test_labels
 
 
-def get_cb(path):
+def get_cb(path, rerank):
     train_questions = []
     train_answers = []
     with open(f"{path}/train.jsonl", "r") as f:
@@ -194,7 +201,12 @@ def get_cb(path):
 
     test_questions = []
     test_answers = []
-    with open(f"{path}/val.jsonl", "r") as f:
+    if rerank:
+        file_path = f"{path}/test_rerank.jsonl"
+    else:
+        file_path = f"{path}/val.jsonl"
+
+    with open(file_path, "r") as f:
         for line in f:
             myjson = json.loads(line)
             q = myjson["hypothesis"]
@@ -214,9 +226,12 @@ def get_cb(path):
     return train_questions, train_answers, test_questions, test_answers
 
 
-def load_dbpedia(path):
+def load_dbpedia(path, rerank):
     train_data = pd.read_csv(f"{path}/train_subset.csv")
-    test_data = pd.read_csv(f"{path}/test.csv")
+    if rerank:
+        test_data = pd.read_csv(f"{path}/test_rerank_subset.csv")
+    else:
+        test_data = pd.read_csv(f"{path}/test.csv")
 
     train_sentences = train_data["Text"]
     train_sentences = list([item.replace('""', '"') for item in train_sentences])
@@ -435,7 +450,7 @@ def load_rte(path):
     return train_questions, train_answers, test_questions, test_answers
 
 
-def load_dataset(path, params, prompt):
+def load_dataset(path, params, prompt, rerank=False):
     """
     Load train and test data
     :param params: experiment parameter, which contains dataset spec
@@ -448,7 +463,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_sst2(path)
+        ) = load_sst2(path, rerank)
         params["prompt_prefix"] = prompt
         params["q_prefix"] = "Review: "
         params["a_prefix"] = "Sentiment: "
@@ -463,7 +478,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_agnews(path)
+        ) = load_agnews(path, rerank)
         params[
             "prompt_prefix"
         ] = prompt  # "Classify the news articles into the categories of World, Sports, Business, and Technology.\n\n"
@@ -536,7 +551,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = get_cb()
+        ) = get_cb(path, rerank)
         params["prompt_prefix"] = ""
         params["q_prefix"] = ""
         params["a_prefix"] = "answer: "
@@ -551,7 +566,7 @@ def load_dataset(path, params, prompt):
             orig_train_labels,
             orig_test_sentences,
             orig_test_labels,
-        ) = load_dbpedia()
+        ) = load_dbpedia(path, rerank)
         params[
             "prompt_prefix"
         ] = "Classify the documents based on whether they are about a Company, School, Artist, Athlete, Politician, Transportation, Building, Nature, Village, Animal, Plant, Album, Film, or Book.\n\n"

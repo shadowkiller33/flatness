@@ -34,7 +34,7 @@ def main(args):
     all_params = []
     for dataset in args["datasets"]:
         for num_shots in args["all_shots"]:
-            data_helper = DataHelper(args["data_dir"], dataset)
+            data_helper = DataHelper(args["data_dir"], dataset, args["rerank"])
             for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
                 for seed in args["seeds"]:
                     p = deepcopy(default_params)
@@ -45,13 +45,18 @@ def main(args):
                     p["num_shots"] = num_shots
                     all_params.append(p)
 
-    filename = (
-        f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}.pkl"
-    )
+    filename = f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}"
     if args["use_saved_results"]:
         load_results(args["output_dir"], filename)
     else:
-        save_results(all_params, model, args["output_dir"], filename, verbose=verbose)
+        save_results(
+            all_params,
+            model,
+            args["output_dir"],
+            filename,
+            verbose=verbose,
+            rerank=args["rerank"],
+        )
 
 
 def load_results(path, filename):
@@ -75,7 +80,7 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
             table[seed][prompt_id][entry_name] = result
 
 
-def save_results(params_list, model_name, path, filename, verbose=False):
+def save_results(params_list, model_name, path, filename, verbose=False, rerank=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
     print(f"Loading model {model_name}")
@@ -88,7 +93,7 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             print(
                 f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
             )
-        data_helper = DataHelper(params["data_dir"], params["dataset"])
+        data_helper = DataHelper(params["data_dir"], params["dataset"], rerank)
         scorer = Scorer(params["mode"], params["bs"], generator.get_tokenizer())
 
         # the current prompt we evaluate metrics on
@@ -285,7 +290,11 @@ def save_results(params_list, model_name, path, filename, verbose=False):
     print_results(result_table)
     import pickle
 
-    with open(f"{path}/{filename}.pickle", "wb") as handle:
+    if rerank:
+        save_path = f"{path}/{filename}_rerank.pickle"
+    else:
+        save_path = f"{path}/{filename}.pickle"
+    with open(save_path, "wb") as handle:
         pickle.dump(result_table, handle)
 
 
@@ -393,7 +402,7 @@ if __name__ == "__main__":
         help="whether to set token prob to zero if not in top 100",
     )
     parser.add_argument("--data-dir", required=True, type=str)
-
+    parser.add_argument("--rerank", action="store_true")
     args = parser.parse_args()
     args = vars(args)
 
