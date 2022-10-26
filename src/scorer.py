@@ -83,7 +83,9 @@ class Scorer:
             print(f"The kendall correlation between flat and acc is {c}")
         return (a, b, c)
 
-    def ours_correlation_MI(self, MI, flatness, performance, verbose=False):
+    def ours_correlation_MI(
+        self, MI, flatness, performance, verbose=False, return_alpha=False
+    ):
         flatness = [float(i) / sum(flatness) for i in flatness]
         MI = [float(i) / sum(MI) for i in MI]
         performance = [float(i) / sum(performance) for i in performance]
@@ -105,9 +107,13 @@ class Scorer:
             print(
                 f"The kendall correlation between ours (flatness + MI) and acc is {C[index]}"
             )
+        if return_alpha:
+            return index
         return (A[index], B[index], C[index])
 
-    def ours_correlation_sen(self, sen, flatness, performance, verbose=False):
+    def ours_correlation_sen(
+        self, sen, flatness, performance, verbose=False, return_alpha=False
+    ):
         flatness = [float(i) / sum(flatness) for i in flatness]
         sen = [float(i) / sum(sen) for i in sen]
         performance = [float(i) / sum(performance) for i in performance]
@@ -129,9 +135,13 @@ class Scorer:
             print(
                 f"The kendall correlation between ours (flatness + sen) and acc is {C[index]}"
             )
+        if return_alpha:
+            return index
         return (A[index], B[index], C[index])
 
-    def MI_sen_correlation(self, sen, MI, performance, verbose=False):
+    def MI_sen_correlation(
+        self, sen, MI, performance, verbose=False, return_alpha=False
+    ):
         A, B, C = [], [], []
         MI = [float(i) / sum(MI) for i in MI]
         sen = [float(i) / sum(sen) for i in sen]
@@ -147,6 +157,8 @@ class Scorer:
             print(f"The pearson correlation between (MI + sen) and acc is {A[index]}")
             print(f"The spearman correlation between (MI + sen) and acc is {B[index]}")
             print(f"The kendall correlation between (MI + sen) and acc is {C[index]}")
+        if return_alpha:
+            return index
         return (A[index], B[index], C[index])
 
     def flat(self, input):
