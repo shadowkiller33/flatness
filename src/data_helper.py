@@ -101,9 +101,11 @@ sst2_prompt = [
 
 
 class DataHelper:
-    def __init__(self, data_dir, dataset_name) -> None:
+    def __init__(self, data_dir, dataset_name, rerank) -> None:
         # download data to specified dir if not already exist
         self.data_path = os.path.join(data_dir, dataset_name)
+        self.rerank = rerank
+        print(f"Using rerank test set: {rerank}")
 
     def get_in_context_prompt(
         self, params, ins, seed, freeze_test_set=True, verbose=False
@@ -113,7 +115,7 @@ class DataHelper:
             all_train_labels,
             all_test_sentences,
             all_test_labels,
-        ) = load_dataset(self.data_path, params, ins + "\n\n")
+        ) = load_dataset(self.data_path, params, ins + "\n\n", self.rerank)
         # retrieve test set
         if params["subsample_test_set"] is None or (
             params["subsample_test_set"] > len(all_test_labels)
