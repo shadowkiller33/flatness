@@ -210,3 +210,33 @@ class Scorer:
             else:
                 correctness_list.append(0)
         return np.mean(correctness_list)
+
+    def max_prob(self, all_label_probs, mode=None, p_cf=None):
+        # evaluate the accuracy with and without contextual calibration
+        num_classes = all_label_probs.shape[1]
+        if p_cf is None:
+            # do not calibrate
+            W = np.identity(num_classes)
+            b = np.zeros([num_classes, 1])
+        else:
+            # calibrate
+            if mode == "diagonal_W":
+                W = np.linalg.inv(np.identity(num_classes) * p_cf)
+                b = np.zeros([num_classes, 1])
+            elif mode == "identity_W":
+                W = np.identity(num_classes)
+                b = -1 * np.expand_dims(p_cf, axis=-1)
+            else:
+                assert False
+
+        maxprobs, pred_labels = [], []
+        for label_probs in all_label_probs:
+            label_probs = label_probs / np.sum(label_probs)  # normalize to 1
+            calibrate_label_probs = (
+                np.matmul(W, np.expand_dims(label_probs, axis=-1)) + b
+            )
+            maxprob = np.max(calibrate_label_probs)
+            ans_label = np.argmax(calibrate_label_probs)
+            maxprobs.append(maxprob)
+            pred_labels.append(ans_label)
+        return maxprobs, pred_labels

@@ -3,33 +3,41 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
+
 def cross_entropy(predictions, targets):
     loss = nn.CrossEntropyLoss()
-    predictions = torch.from_numpy(predictions)#torch.randn(3, 5, requires_grad=True)
+    predictions = torch.from_numpy(predictions)  # torch.randn(3, 5, requires_grad=True)
     targets = torch.from_numpy(targets)
     output = loss(predictions, targets).numpy()
     return output
 
 
-def sensitivity_compute(output, original_label):
+def sensitivity_compute(output, original_label, sample_level=False):
     L = len(output[0])
-    num = len(output)
+    n = len(output)
     output = np.array(output)
-    #original_labels = np.array(original_label)
+    # original_labels = np.array(original_label)
     all = 0
+    sample_sen = []
     for i in range(L):
-        slice = output[:,i].tolist()
+        slice = output[:, i].tolist()
         target = original_label[i]
         ss = [x == target for x in slice]
         match = sum(ss)
+        if sample_level:
+            sample_sen.append(match / n)
         all += match
-    sensitivity = all/L
+    if sample_level:
+        return sample_sen
+    sensitivity = all / L
     return sensitivity
+
 
 def chunk_size_helper(params):
     # Set the batch size (the size of the chunks determines the batch size). Default to 4 for GPT-2 and 20 for OpenAI if
