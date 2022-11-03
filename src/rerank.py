@@ -93,12 +93,12 @@ def rerank_with_alpha(file, flat_mi_alpha, flat_sen_alpha, mi_sen_alpha):
         flat_mi_rs.append(flat_mi_rerank)
         flat_sen_rs.append(flat_sen_rerank)
 
-    print(f"SEN Rerank: {mean_reciprocal_rank(sen_rs)}")
-    print(f"MI Rerank: {mean_reciprocal_rank(mi_rs)}")
-    print(f"Flat Rerank: {mean_reciprocal_rank(flat_rs)}")
-    print(f"SEN+MI Rerank: {mean_reciprocal_rank(sen_mi_rs)}")
-    print(f"Flat+MI Rerank: {mean_reciprocal_rank(flat_mi_rs)}")
-    print(f"Flat+Sen Rerank: {mean_reciprocal_rank(flat_sen_rs)}")
+    print(f"SEN Rerank: {mean_reciprocal_rank(sen_rs):.3}")
+    print(f"MI Rerank: {mean_reciprocal_rank(mi_rs):.3}")
+    print(f"Flat Rerank: {mean_reciprocal_rank(flat_rs):.3}")
+    print(f"SEN+MI Rerank: {mean_reciprocal_rank(sen_mi_rs):.3}")
+    print(f"Flat+MI Rerank: {mean_reciprocal_rank(flat_mi_rs):.3}")
+    print(f"Flat+Sen Rerank: {mean_reciprocal_rank(flat_sen_rs):.3}")
 
 
 def get_file(dataset, model_type):
@@ -138,7 +138,7 @@ def mean_reciprocal_rank(rs):
             Mean reciprocal rank
     """
     rs = (np.asarray(r).nonzero()[0] for r in rs)
-    return np.mean([1.0 / (r[0] + 1) if r.size else 0.0 for r in rs])
+    return 100 * np.mean([1.0 / (r[0] + 1) if r.size else 0.0 for r in rs])
 
 
 def top1_rank(rs):
@@ -147,11 +147,11 @@ def top1_rank(rs):
 
 
 if __name__ == "__main__":
-    dataset = "sst2"  # change to other dataset
+    dataset = "dbpedia"  # change to other dataset
     for model_type in ["_", "-medium", "-large", "-xl"]:
         (test_file, rerank_file) = get_file(dataset, model_type)
+        print(f"evaluating {test_file}")
         # infer best alpha from rerank file (dev set)
         (flat_mi_alpha, flat_sen_alpha, mi_sen_alpha) = find_best_alpha(rerank_file)
         # evaluate rerank acc from rerank results
         rerank_with_alpha(test_file, flat_mi_alpha, flat_sen_alpha, mi_sen_alpha)
-        break
