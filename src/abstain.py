@@ -108,6 +108,7 @@ def save_results(params_list, model_name, path, filename, verbose=False, rerank=
             test_sentences,
             test_labels,
         ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
+        update_result_dict(result_table, prompt_id, seed, prompt, "ytrue", test_labels)
         num_test = len(test_labels)
         prompt_orders = DataHelper.get_prompt_order(
             train_sentences, train_labels, num=1
