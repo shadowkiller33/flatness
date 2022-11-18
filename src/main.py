@@ -34,7 +34,7 @@ def main(args):
     all_params = []
     for dataset in args["datasets"]:
         for num_shots in args["all_shots"]:
-            data_helper = DataHelper(args["data_dir"], dataset)
+            data_helper = DataHelper(args["data_dir"], dataset, args["rerank"])
             for prompt_id, prompt in enumerate(data_helper.get_prompts(dataset)):
                 for seed in args["seeds"]:
                     p = deepcopy(default_params)
@@ -45,32 +45,24 @@ def main(args):
                     p["num_shots"] = num_shots
                     all_params.append(p)
 
-    filename = (
-        f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}.pkl"
-    )
+    filename = f"{dataset}_{model}_{num_shots}shot_{repr(args['subsample_test_set'])}"
     if args["use_saved_results"]:
         load_results(args["output_dir"], filename)
     else:
-        save_results(all_params, model, args["output_dir"], filename, verbose=verbose)
+        save_results(
+            all_params,
+            model,
+            args["output_dir"],
+            filename,
+            verbose=verbose,
+            rerank=args["rerank"],
+        )
 
 
 def load_results(path, filename):
     # load saved results from model
     result_table = load_pickle(path, filename)
     print_results(result_table)
-
-
-def compute_flatness():
-    # difference = []
-    # attention = generator.get_logits(prompt)
-    #
-    # for perturbed_sentence in perturbed:
-    #     attention_p = generator.get_logits(perturbed_sentence)
-    #     difference.append(torch.abs(attention_p - attention))
-    #
-    # flatness = scorer.flat(difference)
-    # flatness_all.append(flatness)
-    pass
 
 
 def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
@@ -88,36 +80,44 @@ def update_result_dict(table, prompt_id, seed, prompt, entry_name, result):
             table[seed][prompt_id][entry_name] = result
 
 
-def save_results(params_list, model_name, path, filename, verbose=False):
+def save_results(params_list, model_name, path, filename, verbose=False, rerank=False):
     result_table = {}  # keep all sens, flatness, mi results
     generator = Generator(model_name)
+    print(f"Loading model {model_name}")
+
+    # append demos for predictions
 
     for params in params_list:
+
         if verbose:
             print(
-                f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}",
-                flush=True,
+                f"Evaluate on promt id: {params['prompt_id']}, seed: {params['seed']}"
             )
-        data_helper = DataHelper(params["data_dir"], params["dataset"])
+        data_helper = DataHelper(params["data_dir"], params["dataset"], rerank)
         scorer = Scorer(params["mode"], params["bs"], generator.get_tokenizer())
 
         # the current prompt we evaluate metrics on
         prompt_id, prompt = params["prompt_id"], params["prompt"]
         seed = params["seed"]
 
-        # append demos for predictions
         (
             train_sentences,
             train_labels,
             test_sentences,
             test_labels,
         ) = data_helper.get_in_context_prompt(params, prompt, seed, verbose=verbose)
+
+        prompt_orders = DataHelper.get_prompt_order(
+            train_sentences, train_labels, num=1
+        )
+        train_sentences, train_labels = prompt_orders[0]
         raw_resp_test = generator.get_model_response(
             params, train_sentences, train_labels, test_sentences
         )
         all_label_probs = generator.get_label_probs(
             params, raw_resp_test, train_sentences, train_labels, test_sentences
         )
+
         #### MI
         original_labels = np.argmax(all_label_probs, axis=1)
         normalized_probs = softmax(all_label_probs, axis=1)
@@ -130,7 +130,6 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
         #### CALCULATE PERFORMANCE
         content_free_inputs = ["N/A", "", "[MASK]"]
-        output = []
         p_cf = generator.get_p_content_free(
             params,
             train_sentences,
@@ -141,6 +140,8 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         acc_calibrated = scorer.eval_accuracy(
             all_label_probs, test_labels, mode="diagonal_W", p_cf=p_cf
         )
+        if verbose:
+            print(f"Calibrated ACC: {acc_calibrated}")
 
         update_result_dict(result_table, prompt_id, seed, prompt, "acc", acc_original)
         update_result_dict(
@@ -152,32 +153,33 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         )
 
         #### CALCULATE SENSITIVITY
+
         perturbed = DataHelper.get_pertubed_set(
             prompt, params["perturbed_num"]
         )  # get perturbed data
         prompt_orders = DataHelper.get_prompt_order(
             train_sentences, train_labels, params["perturbed_num"]
         )
+        output = []
         for (perturbed_prompt, order) in zip(perturbed, prompt_orders):
-            # (_, _, test_sentences, test_labels,) = data_helper.get_in_context_prompt(
-            #     params, perturbed_prompt, verbose=False
-            # )
             train_sentences, train_labels = order
-            raw_resp_test = generator.get_model_response(
+            raw_resp_test_sen = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences
             )
-            all_label_probs111 = generator.get_label_probs(
-                params, raw_resp_test, train_sentences, train_labels, test_sentences
+            all_label_probs_sen = generator.get_label_probs(
+                params, raw_resp_test_sen, train_sentences, train_labels, test_sentences
             )
-            labels111 = np.argmax(all_label_probs111, axis=1)
-            # sensitivity = np.sum([labels111 == original_labels])/len(train_labels)
+            labels111 = np.argmax(all_label_probs_sen, axis=1)
             output.append(labels111)
-        sensitivity = sensitivity_compute(output, original_labels) * -1
+
+        sensitivity = sensitivity_compute(output, original_labels)
         update_result_dict(result_table, prompt_id, seed, prompt, "sen", sensitivity)
 
         #### CALCULATE FLATNESS
         losses = []
-        for i in range(params["perturbed_num"]):
+
+        Length = params["perturbed_num"]
+        for i in range(Length):
             raw_resp_test_flat = generator.get_model_response(
                 params, train_sentences, train_labels, test_sentences, perturbed=True
             )
@@ -188,11 +190,13 @@ def save_results(params_list, model_name, path, filename, verbose=False):
                 train_labels,
                 test_sentences,
             )
-            # original_labels_flat = np.argmax(all_label_probs_flat, axis=1)
             loss = cross_entropy(all_label_probs_flat, original_labels)
             losses.append(loss)
+            # Move model of current generator to cpu: Avoid GPU Memory Peak in new generator initialization
+            generator.release_model()
+            generator = Generator(model_name)
         flatness = sum(losses) / len(losses)
-        update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness * -1)
+        update_result_dict(result_table, prompt_id, seed, prompt, "flat", flatness)
 
         # save non-metric information
         # this might save too much information, disabled for now
@@ -237,9 +241,9 @@ def save_results(params_list, model_name, path, filename, verbose=False):
             perf_list.append(result_table[seed_id][prompt_id]["perf"])
 
         # Magnitude Normalize
-        sen_list = [float(i) / sum(sen_list) for i in sen_list]
-        mi_list = [float(i) / sum(mi_list) for i in mi_list]
-        flat_list = [float(i) / sum(flat_list) for i in flat_list]
+        # sen_list = [float(i) / sum(sen_list) for i in sen_list]
+        # mi_list = [float(i) / sum(mi_list) for i in mi_list]
+        # flat_list = [float(i) / sum(flat_list) for i in flat_list]
 
         # sensitivity
         sen_p, sen_s, sen_k = scorer.sen_correlation(
@@ -254,6 +258,12 @@ def save_results(params_list, model_name, path, filename, verbose=False):
         result_table[seed_id]["mi_p"] = mi_p
         result_table[seed_id]["mi_s"] = mi_s
         result_table[seed_id]["mi_k"] = mi_k
+
+        # Flat
+        f_p, f_s, f_k = scorer.ours_correlation(flat_list, perf_list, verbose=verbose)
+        result_table[seed_id]["f_p"] = f_p
+        result_table[seed_id]["f_s"] = f_s
+        result_table[seed_id]["f_k"] = f_k
 
         # Flat + MI
         ours_MI_p, ours_MI_s, ours_MI_k = scorer.ours_correlation_MI(
@@ -273,14 +283,21 @@ def save_results(params_list, model_name, path, filename, verbose=False):
 
         # MI + sensitivity
         MI_sen_p, MI_sen_s, MI_sen_k = scorer.MI_sen_correlation(
-            flat_list, mi_list, perf_list, verbose=verbose
+            sen_list, mi_list, perf_list, verbose=verbose
         )
         result_table[seed_id]["MI_sen_p"] = MI_sen_p
         result_table[seed_id]["MI_sen_s"] = MI_sen_s
         result_table[seed_id]["MI_sen_k"] = MI_sen_k
 
-    save_pickle(path, filename, result_table)
     print_results(result_table)
+    import pickle
+
+    if rerank:
+        save_path = f"{path}/{filename}_rerank.pickle"
+    else:
+        save_path = f"{path}/{filename}.pickle"
+    with open(save_path, "wb") as handle:
+        pickle.dump(result_table, handle)
 
 
 if __name__ == "__main__":
@@ -387,7 +404,7 @@ if __name__ == "__main__":
         help="whether to set token prob to zero if not in top 100",
     )
     parser.add_argument("--data-dir", required=True, type=str)
-
+    parser.add_argument("--rerank", action="store_true")
     args = parser.parse_args()
     args = vars(args)
 
