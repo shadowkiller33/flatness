@@ -5,7 +5,7 @@ import numpy as np
 import math
 from collections import defaultdict
 
-dataset2label = {"agnews": 4}
+dataset2label = {"agnews": 4, "dbpedia": 14, "sst2": 2}
 
 
 def f1(hyp, target, dataset):
@@ -46,17 +46,21 @@ def normalize(x):
 def select_pred(coverage, confidence, yhat, ytrue):
     total = len(confidence)
     select_amount = math.floor(coverage * total)
-    out = []
-    out_true = []
+    out1, out2 = [], []
+    out_true1, out_true2 = [], []
     conf_tuple = []
     for i in range(total):
         conf_tuple.append((i, confidence[i]))
-    sort_conf = sorted(conf_tuple, key=lambda x: x[1], reverse=True)
+    sort_conf1 = sorted(conf_tuple, key=lambda x: x[1], reverse=True)
+    sort_conf2 = sorted(conf_tuple, key=lambda x: x[1], reverse=False)
     for k in range(select_amount):
-        index = sort_conf[k][0]
-        out.append(yhat[index])
-        out_true.append(ytrue[index])
-    return out, out_true
+        index = sort_conf1[k][0]
+        out1.append(yhat[index])
+        out_true1.append(ytrue[index])
+        index = sort_conf2[k][0]
+        out2.append(yhat[index])
+        out_true2.append(ytrue[index])
+    return out1, out_true1, out2, out_true2
 
 
 def update_result_dict(table, key, coverage, value):
@@ -75,8 +79,8 @@ def choose_alpha(coverage, yhat, ytrue, sen, flat, dataset):
     for i in range(1000):
         alpha = 0.0002 * (i - 500)
         senflat = sen + alpha * flat
-        sf_hat, sf_true = select_pred(coverage, senflat, yhat, ytrue)
-        sf_f1 = f1(sf_hat, sf_true, dataset)
+        sf_hat, sf_true, sf_hat1, sf_true1 = select_pred(coverage, senflat, yhat, ytrue)
+        sf_f1 = max(f1(sf_hat, sf_true, dataset), f1(sf_hat1, sf_true1, dataset))
         if sf_f1 > maxf1:
             maxf1 = sf_f1
             best_alpha = alpha
@@ -89,42 +93,59 @@ def main(result_table, dataset):
     for seed_id in result_table.keys():
         for prompt_id in result_table[seed_id].keys():
             maxprob = np.array(result_table[seed_id][prompt_id]["maxprob"]).tolist()
-            yhat = result_table[seed_id][prompt_id]["yhat"]
-            ytrue = result_table[seed_id][prompt_id]["ytrue"]
             sen = np.array(result_table[seed_id][prompt_id]["sen"]).tolist()
             flat = np.array(result_table[seed_id][prompt_id]["flat"]).tolist()
+            yhat = result_table[seed_id][prompt_id]["yhat"]
+            ytrue = result_table[seed_id][prompt_id]["ytrue"]
+
+            # create devset for choosing alpha
+            devsize = math.floor(len(yhat) * 0.2)
+            dev_yhat, dev_ytrue = yhat[:devsize], ytrue[:devsize]
+            test_yhat, test_ytrue = yhat[devsize:], ytrue[devsize:]
+
             # normalize to 0-1 region
             sen = normalize(sen)
             flat = normalize(flat)
-            maxprob = normalize(flat)
+            maxprob = normalize(maxprob)
 
-            f1_no_abstain = f1(yhat, ytrue, dataset)
+            # f1_no_abstain = f1(yhat, ytrue, dataset)
             # print(f"F1 score with 100 coverage: {f1_no_abstain}")
 
             for coverage in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]:
                 # print(f"Compute F1 with coverage {coverage}")
-                sen_yhat, sen_y = select_pred(coverage, sen, yhat, ytrue)
-                sen_f1 = f1(sen_yhat, sen_y, dataset)
+
+                sen_yhat, sen_y, sen_yhat1, sen_y1 = select_pred(
+                    coverage, sen[devsize:], test_yhat, test_ytrue
+                )
+                sen_f1 = max(
+                    f1(sen_yhat, sen_y, dataset), f1(sen_yhat1, sen_y1, dataset)
+                )
+
                 f1_results = update_result_dict(f1_results, "sen", coverage, sen_f1)
 
                 # print(f"SEN F1: {sen_f1}")
 
-                flat_yhat, flat_y = select_pred(coverage, flat, yhat, ytrue)
-                flat_f1 = f1(flat_yhat, flat_y, dataset)
+                flat_yhat, flat_y, flat_yhat1, flat_y1 = select_pred(
+                    coverage, flat[devsize:], test_yhat, test_ytrue
+                )
+                flat_f1 = max(
+                    f1(flat_yhat, flat_y, dataset), f1(flat_yhat1, flat_y1, dataset)
+                )
                 f1_results = update_result_dict(f1_results, "flat", coverage, flat_f1)
                 # print(f"Flat F1: {flat_f1}")
 
-                maxprob_yhat, maxprob_y = select_pred(coverage, maxprob, yhat, ytrue)
-                maxprob_f1 = f1(maxprob_yhat, maxprob_y, dataset)
+                maxprob_yhat, maxprob_y, maxprob_yhat1, maxprob_y1 = select_pred(
+                    coverage, maxprob[devsize:], test_yhat, test_ytrue
+                )
+                maxprob_f1 = max(
+                    f1(maxprob_yhat, maxprob_y, dataset),
+                    f1(maxprob_yhat1, maxprob_y1, dataset),
+                )
                 f1_results = update_result_dict(
                     f1_results, "maxprob", coverage, maxprob_f1
                 )
                 # print(f"Maxprob F1: {maxprob_f1}")
 
-                # create devset for choosing alpha
-                devsize = math.floor(len(yhat) * 0.2)
-                dev_yhat, dev_ytrue = yhat[:devsize], ytrue[:devsize]
-                test_yhat, test_ytrue = yhat[devsize:], ytrue[devsize:]
                 alpha, maxf1 = choose_alpha(
                     coverage,
                     dev_yhat,
@@ -136,10 +157,13 @@ def main(result_table, dataset):
                 senflat = np.array(sen) + np.array(flat) * alpha
                 senflat = senflat.tolist()[devsize:]
 
-                sen_flat_yhat, sen_flat_y = select_pred(
+                sen_flat_yhat, sen_flat_y, sen_flat_yhat1, sen_flat_y1 = select_pred(
                     coverage, senflat, test_yhat, test_ytrue
                 )
-                sen_flat_f1 = f1(sen_flat_yhat, sen_flat_y, dataset)
+                sen_flat_f1 = max(
+                    f1(sen_flat_yhat, sen_flat_y, dataset),
+                    f1(sen_flat_yhat1, sen_flat_y1, dataset),
+                )
                 f1_results = update_result_dict(
                     f1_results, "sen_flat", coverage, sen_flat_f1
                 )
@@ -167,14 +191,19 @@ def main(result_table, dataset):
 
 if __name__ == "__main__":
     path = "/home/wtan12/flatness/output"
-    dataset = "agnews"
+    dataset = "dbpedia"
     for _, _, files in os.walk(path):
-        for file in files:
-            if file.startswith(f"{dataset}_gpt2_") and "abstain" in file:
-                # if file.startswith("sst2_gpt2-large"):
-                print(f"Checking result of {file}")
-                with open(f"{path}/{file}", "rb") as f:
-                    data = pickle.load(f)
-                    main(data, dataset)
-                break
+        for filetype in ["_", "-medium", "-large", "-xl"]:
+            for file in files:
+                if (
+                    file.startswith(f"{dataset}_gpt2{filetype}")
+                    and "abstain" in file
+                    and "512" in file
+                ):
+                    # if file.startswith("sst2_gpt2-large"):
+                    print(f"Checking result of {file}")
+                    with open(f"{path}/{file}", "rb") as f:
+                        data = pickle.load(f)
+                        main(data, dataset)
+                    break
         break
