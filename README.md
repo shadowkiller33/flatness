@@ -5,11 +5,11 @@ This is the official documentation for the paper **Flatness-Aware Prompt Selecti
 ## Table of Contents
 
 - [Installation](#installation)
-- [Obtain scores](#Obtain scores)
-- [Result format](#Result format)
-- [Tune Alpha](#Tune Alpha)
+- [Obtain scores](#Obtain_scores)
+- [Result format](#Result_format)
+- [Tune Alpha](#Tune_Alpha)
 - [Customization](#Customization)
-- [Contact Us](#Contact Us)
+- [Contact Us](#Contact_Us)
 
 
 ## Installation
