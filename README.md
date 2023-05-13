@@ -1,29 +1,46 @@
-# flatness
-This is a simpe implementation of the **Prompt Flatness**
+# Flatness-Aware Prompt Selection Improves Accuracy and Sample Efficiency
 
+This is the official documentation for the paper **Flatness-Aware Prompt Selection Improves Accuracy and Sample Efficiency**. 
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Obtain scores](#Obtain scores)
+- [Result format](#Result format)
+- [Tune Alpha](#Tune Alpha)
+- [Customization](#Customization)
+- [Contact Us](#Contact Us)
+
+
+## Installation
+To run the codes, follow the steps below:
+Install the required dependencies as followings:
+```
+pip install -r requirements.txt
+```
+
+
+## Obtain scores
+Get the metrics scores for the prompts as follows:
 ```bash
 CUDA_VISIBLE_DEVICES=0 python main.py \
 --model="gpt2" \
 --dataset=agnews \
 --num_seeds=1 \
---mode = 'mean'
 --all_shots = 4 \
---subsample_test_set=300 \
+--subsample_test_set=512 \
 --approx
 ```
 
-* `mode`: the mode to calculate flatness
-  * `mean`: L1 distance
-  * `max`: Maximum of difference (L1)
-  * `mean-max`: combine
 * `all_shots`: Number of demonstrations
 * `model`: the selected model
 * `dataset`: dataset name
 * `subsample_test_set`: size of test set to use to speed up eval. None means using all test set
 
-To set your own custom prompts, you can change it at promptset in [main.py](https://github.com/shadowkiller33/flatness/blob/main/main.py)
 
-## Result Tree Printout Format
+
+## Result format
+After running the codes above, you'll get results (pickle file).
 For each experiment, we store a result tree in the following format:
 ```
 {
@@ -34,25 +51,36 @@ For each experiment, we store a result tree in the following format:
       promt: prompt_text,
       sen: sen_score,
       mi: mi_score,
-      perf: performance_score,
+      perf: performance (acc),
 
-      acc: original_acc,
-      acc_c: calibrated_acc,
-      p_cf: [context_free_probs],
-      others: train/test_sentences, etc.
     }
     // seed-level info: correlations across prompt
-    sen_p: sen_pearson_corr,
-    sen_s: sen_spearman_corr,
-    sen_k: sen_kendalltau_corr,
+    sen_p:  ,
+    sen_s: ,
     mi_p: ..,
     mi_s: ..,
-    mi_k: ..,
-    ours_p: ..,
-    ours_s: ..,
-    ours_k: ..,
   }
   // top level info like avg sensitivity avg accuracy etc. is calculated by print_results function. they are not stored in the pickle
 }
 ```
-for different models and datasets, they are serialized in different location, so there is no need to store that information in result tree.
+* `id`: the prompt id
+* `promt`: the contents of prompt
+* `sen`: the sensitivity of the prompt
+* `mi`: multual information of the prompt
+* `perf`: accuracy of the prompt
+* `sen_p`: Pearson correlation between performance and sensitivity
+* `sen_s`: Spearman correlation between performance and sensitivity
+* `mi_p`: Pearson correlation between performance and mutual information
+* `mi_s`: Spearman correlation between performance and mutual information
+
+
+## Tune Alpha
+After obtaining the correlation between metrics scores and performance on the dev-set, we tune the alpha that maximizes the correlation or other metrics (e.g., NDCG). Then fix it, and run on the large test set.
+
+## Customization
+To set your own custom prompts, you can change it at promptset in [main.py](https://github.com/shadowkiller33/flatness/blob/main/main.py)
+
+
+
+## Contact Us
+If you have any questions, suggestions, or concerns, please reach out to us.
