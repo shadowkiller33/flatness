@@ -80,7 +80,22 @@ After obtaining the correlation between metrics scores and performance on the de
 ## Customization
 To set your own custom prompts, you can change it at promptset in [main.py](https://github.com/shadowkiller33/flatness/blob/main/main.py)
 
-
-
 ## Contact Us
 If you have any questions, suggestions, or concerns, please reach out to us.
+
+## Relevant paper
+If you find this repository/data helpful, cite the following work: 
+
+```bibtex 
+@article{shen2023flatnessaware,
+      title={Flatness-Aware Prompt Selection Improves Accuracy and Sample Efficiency}, 
+      author={Lingfeng Shen and Weiting Tan and Boyuan Zheng and Daniel Khashabi},
+      year={2023},
+      eprint={2305.10713},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}, 
+      url={https://arxiv.org/abs/2305.10713}
+}
+```
+
+
